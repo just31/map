@@ -47,7 +47,7 @@ define('map_main1', ['jquery', 'als'], function ($, als) {
   }
 
   /**
-   * Загрузка карты
+   * Загрузка карты.
    */
   Map.prototype.loadMap = function () {
     var yMaps = $.Deferred();
