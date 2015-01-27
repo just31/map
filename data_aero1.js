@@ -76,8 +76,8 @@ coord_aero = closestObject.geometry.getCoordinates();
 
 console.log('init object', coord_aero);
 
-var point_1_aero = coord_aero[0]; // широта ближайшей точки
-var point_2_aero = coord_aero[1]; // долгота ближайшей точки
+var point_1_aero = coord_aero[0]; // широта ближайшей точки.
+var point_2_aero = coord_aero[1]; // долгота ближайшей точки.
 
 var distance_aero_1 =+ Math.round(ymaps.coordSystem.geo.getDistance(coordinates, coord_aero) / 1000);
 
