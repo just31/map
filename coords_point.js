@@ -157,7 +157,7 @@ result.search('geometry.type != "Point"').addToMap(myMap);
 // Точечные объекты добавим на карту через кластеризатор.
 myMap.geoObjects.add(result.search('geometry.type == "Point"').clusterize());
 
-//удаление объектов(списка аэропортов) с карты
+//удаление объектов(списка аэропортов) с карты.
 ymapsmlButton1.click(function () {
 var result1 = result.remove(result);
 myMap.geoObjects.remove(result);
