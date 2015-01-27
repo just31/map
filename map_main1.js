@@ -47,7 +47,7 @@ define('map_main1', ['jquery', 'als'], function ($, als) {
   }
 
   /**
-   * Загрузка карты.
+   * Загрузка карты
    */
   Map.prototype.loadMap = function () {
     var yMaps = $.Deferred();
@@ -111,14 +111,14 @@ define('map_main1', ['jquery', 'als'], function ($, als) {
     // myMap.options.set('scrollZoomSpeed', 0.5);
 
     // Добавляем геоколллекцию меток аэропортов на карту
-    // Создание пустой геоколллекции myCollection, для добавления в нее списка аэропортов из файла aero1.csv.
+    // Создание пустой геоколллекции myCollection, для добавления в нее списка аэропортов из файла aero3.csv.
     myCollection = new ymaps.GeoObjectCollection();
     /*
     // список аэропортов России
     var path = 'http://intranet.russiancarbon.org/f/min/aero1.csv';
     */
     // список аэропортов Мира
-    var path = 'http://intranet.russiancarbon.org/f/min/aero3.csv';
+    var path = 'http://intranet.russiancarbon.org/f/min/map/aero3.csv';
     // Запрос cvs файла со списком аэропортов
      $.ajax({
 	    url:path,
