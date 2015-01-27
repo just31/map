@@ -96,9 +96,9 @@ myMap.geoObjects.add(placemark_1);
 
 /*
 ymaps.route([
-   coordinates,  //от найденной точки аэропорта
+   coordinates,  //от найденной точки аэропорта.
    coord_aero
-],       //до перетянутой на карту точки
+],       //до перетянутой на карту точки.
 {
    // Опции маршрутизатора
    avoidTrafficJams: true, // строить маршрут с учетом пробок
