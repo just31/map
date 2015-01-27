@@ -104,7 +104,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     myMap = this.yMap;
 
     // Добавляем геоколллекцию меток аэропортов на карту
-    // Создание пустой геоколллекции myCollection, для добавления в нее списка аэропортов из файла aero1.csv.
+    // Создание пустой геоколллекции myCollection, для добавления в нее списка аэропортов из файла aero3.csv.
     myCollection = new ymaps.GeoObjectCollection();
 
         // список аэропортов Мира
