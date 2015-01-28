@@ -271,6 +271,11 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // делаем ее видимой, передаем далее в скрипте, вывод меток маршрута, механизму маршрутизатизации route().
                          placemark.options.set('visible', true);
 
+                         // Если строится автомаршрут, по клику или из тулбара, то добавляем его точки в массив markers
+                         if (placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
+                           markers.push(placemark);
+                         }
+
                          // НАЧИНАЕМ СТРОИТЬ АВИАМАРШРУТ
                          // если выбран значок самолета, подгружаем список аэропортов
                          if (placemark.options.get('iconImageHref') == '/f/min/images/airplane.png'){
@@ -321,13 +326,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 			             }
                          // console.log('init object', point_aero);
 
-                         // в балуне показываем координаты новой метки
+                         // производим геокодирование установленной на карте, метки
                          ymaps.geocode(coord_aero_main).then(function (res) {
                            firstGeoObject_1 = res.geoObjects.get(0);
                            var firstGeoObject_text_1 = firstGeoObject_1.properties.get('text');
                            // собираем информацию о точках авиамаршрута, добавленного по картинкам из тулбара.
                            // добавляем текстовую информацию(firstGeoObject_1.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
                            geo_points.push(firstGeoObject_text_1);
+                           //console.log('init object', geo_points);
                            // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
                            for(var i = 0, l = geo_points.length; i < l; i++) {
                              // два варианта нахождения последнего символа, в строке описания каждой точки маршрута
@@ -343,9 +349,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            .set({
                              balloonContent: firstGeoObject_text_1
                            });
+                           if(point_geo.length > 1){
+                            //console.log('init object', point_geo);
+                            $(".route-length2").empty();
+                            $(".route-length2").append('<h3>Все точки автомаршрута: <div style="margin: -28px 0 0 15px; text-align: left; line-height: 1.8"><strong style="font-size: 12px !important;">' + point_geo + '.</strong></div></h3>');
+                           }
                          });
                          //placemark.properties.set('balloonContentBody', coord_aero);
-
                          // Перед построением ломаной авиамаршрута проверяем, были ли уже проложены старые и удаляем их, если да.
                          if(myGeoObject) myMap.geoObjects.remove(myGeoObject);
 
@@ -373,7 +383,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          properties:{
                            // Содержимое балуна.
                            //balloonContent: 'Авиамаршрут, общее расстояния: '+ distance_aero_main +' км'
-                           balloonContent: 'Выбран авиамаршрут между ' + point_geo
+                           balloonContent: 'Продолжаем перелет'
                          }
                          }, {
                          // Задаем опции геообъекта.
@@ -388,6 +398,11 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // Добавляем линию авиамаршрута на карту.
                          myMap.geoObjects.add(myGeoObject);
 
+                         if(point_aero.length > 1){
+                          // Устанавливаем центр и масштаб карты так, чтобы отобразить всю прямую авиамаршрута целиком. Устанавливаем на карте границы линии авиамаршрута.
+                          myMap.setBounds(myGeoObject.geometry.getBounds());
+                         }
+
                          // создаем механизм получения длины всей ломаной маршрута
                          // узнаем тип системы координат
                          var coordSystem = myMap.options.get('projection').getCoordSystem(),
@@ -400,6 +415,75 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         // общее расстояние ломаной авиамаршрута
                         var distance_aero_main = distance_aero_length.toFixed(0);
 
+                        // Получение координат точек, для формулы вычисления углеродного следа
+                        // получаем координаты первой точки авиамаршрута.
+                        var point_first = point_aero[0];
+                        // получаем значения широты и долготоы первой точки.
+                        var point_first_lat = point_aero[0][0];
+                        var point_first_lon = point_aero[0][1];
+                        //console.log('init object', point_first);
+                        //console.log('init object', point_first_lat);
+                        //console.log('init object', point_first_lon);
+
+
+                        // получаем координаты второй точки авиамаршрута.
+                        var point_two = point_aero[1];
+                        // получаем значения широты и долготоы второй точки.
+                        var point_two_lat = point_aero[1][0];
+                        var point_two_lon = point_aero[1][1];
+                        //console.log('init object', point_first);
+                        //console.log('init object', point_two_lat);
+                        //console.log('init object', point_two_lon);
+
+                        // перевести координаты в радианы
+                        var lat1 = point_first_lat * Math.PI / 180;
+                        var lat2 = point_two_lat * Math.PI / 180;
+                        var long1 = point_first_lon * Math.PI / 180;
+                        var long2 = point_two_lon * Math.PI / 180;
+
+                        // косинусы и синусы широт и разницы долгот
+                        var cl1 = Math.cos(lat1);
+                        var cl2 = Math.cos(lat2);
+                        var sl1 = Math.sin(lat1);
+                        var sl2 = Math.sin(lat2);
+                        var delta = long2 - long1;
+                        var cdelta = Math.cos(delta);
+                        var sdelta = Math.sin(delta);
+
+                        //формула вычисления длины большого круга
+                        var y = Math.sqrt(Math.pow(cl2 * sdelta, 2) + Math.pow(cl1 * sl2 - sl1 * cl2 * cdelta, 2));
+                        var x = sl1 * sl2 + cl1 * cl2 * cdelta;
+
+                        // получение длин отрезков ломаной
+                        var points_aero_num = myGeoObject.geometry.getLength();
+
+                        var ad = Math.atan2(y, x) * points_aero_num;
+
+                        // формула получения расстояния перелета, через вычисление длины большого круга, между двумя выбранными точками на карте. Для авиамаршрута.
+                        // расстояние перелета в км,
+                        var dist = (ad * 6372795)/1000;
+                        var dist_1 = dist.toFixed(0);
+                        // расстояние перелета в м, необходимо для вычисления длины углеродного следа.
+                        var dist_co = (ad * 6372795);
+                        var distance_main_co = (ad * 6372795);
+
+                        //формула вычисления углеродного следа, при полете на самолете. Данные:
+                        var massa = 22.5; //Удельный вес на пасажира
+                        if (dist < 550) {
+                          massa = 46.0;
+                        } else if (dist < 1500) {
+                          massa = 38.2;
+                        } else if (dist < 5500) {
+                          massa = 23,7;
+                        }
+
+                        var num_people = 250;
+
+                        // Основная формула вычисления углеродного следа:
+                        var co = (((distance_main_co/1000) * massa * 3.157) / 1000000)*1*2.7*num_people;
+                        // округляем значение до одной цифры, после запятой.
+                        var co_1 = co.toFixed(1);
+
                         //формула перевода часов и десятичных долей часа, в часы, минуты и секунды
                         var nTime = (distance_aero_main/840)+0.5;
                         nTime=Number(nTime);
@@ -410,18 +494,17 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 	                    var m=Math.floor(mT);
 	                    var s=((mT-m)*60);
 
-                        if((markers.length >= 1)){
+                        //Если выбрано более одной точки, и начался строится маршрут, выводим информацию по нему.
+                        if((point_aero.length > 1)){
                           $(".route-length1").append('<H3>Выбран авиамаршрут:</H3> <h3>Расстояние авиаперелета: <strong>' + distance_aero_main + ' км.</strong></h3><small>Расстояние между выбранными точками, производится через вычисление длины большого круга(то есть это расстояние авиаперелета). Оно равно '+ distance_aero_main +' км.</small>');
                           $(".route-length1").append('<h3>Время авиаперелета: <strong>'+ h +'ч. ' + m +' мин.</strong></h3><small>Скорость самолета принята за 840 км/час. Приняты следующие допущения: учтены добавочные 15 минут на взлет и посадку, в среднем маршрут самолета длиннее расчетного на 10%.</small>');
+                          $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main + ' км.</small>');
                         }
 
                        }
                        // завершение работы по списку аэропортов
                        // ЗАВЕРШЕНИЕ ПОСТРОЕНИЯ АВИАМАРШРТУА
 
-
-                         // добавляем новые метки по всем маршрутам в массив markers.
-                         markers.push(placemark);
                          // Выключаем скролл карты при перетаскивании.
                          ymaps.behavior.storage.remove('dragScroll', DragScrollBehavior);
                          myMap.behaviors.disable('dragScroll');
@@ -431,7 +514,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 			             point[ii] = markers[ii].geometry.getCoordinates();
 			             }
 
-                         console.log('init object', markers.length);
+                         //console.log('init object', markers.length);
                          // Перед построением нового маршрута проверяем, были ли уже проложены старые и удаляем их, если да.
                          if(route) myMap.geoObjects.remove(route);
 
@@ -766,10 +849,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 '<div id="menu">Прежде чем начать строить автомаршрут, выберите необходимые данные по нему. И после, перетащите следующую точку на карте.<br /><br /> <small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
                             }
 
-                            console.log('init object', markers.length);
+                            //console.log('init object', markers.length);
                             // если выбран значок не 'самолетик', обрабатываем данные из формы балуна.
                             if(placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
-                            if(markers.length == 1 && !route)
+                            if(markers.length == 1)
                             {
                               // Если отмечена первая метка, открываем балун с выбором данных по маршруту.
                               placemark.balloon.open();
@@ -982,7 +1065,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              //myPlacemark.properties.set('balloonContentBody', firstGeoObject_text + '<br /><a href="#" class="btn btn-warning">удалить метку</a>');
              // в балуне первой метки, отмеченной на карте, выводим html-форму, с тремя списками select, с данными маршрута(типп: топлива, поездки, маршрута).
              myPlacemark.properties.set("balloonContentBody",
-             '<div id="menu">Прежде чем начать строить автомаршрут, выберите необходимые данные по нему. И после, установите следующую точку на карте.<br /><br /> <small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
+'<div id="menu">Прежде чем начать строить автомаршрут, выберите необходимые данные по нему. И после, установите следующую точку на карте.<br /><br /> <small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
 
              if(markers.length == 1)
              {
@@ -1363,8 +1446,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 		 for(var i = 0, l = markers.length; i < l; i++) {
 		     myMap.geoObjects.remove(markers[i]);
 		 }
+
+         // Удаление всех точек авиамаршрута, добавленных в массив distance_aero.
+         for(var j = 0, h = distance_aero.length; j < h; j++) {
+		   myMap.geoObjects.remove(distance_aero[j]);
+		 }
          // обнуляем переменную счетчик меток и массивы.
 		 markers = [];
+         console.log('init object', markers.length);
 		 point = [];
          geo_points = [];
          point_geo = [];
