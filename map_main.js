@@ -68,7 +68,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
   Map.prototype.createMap = function () {
 
-    var route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_fuel, type_travel, type_route, way_m, way_m_upd, visibleObjects, mGeocoder, geoObjects_coll, firstGeoObject_1, ballon_aero, result, ch = 1;
+    var route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_fuel, type_travel, aero_num_people, type_aero, type_rad,
+    num, rad, type_route, way_m, way_m_upd, visibleObjects, mGeocoder, geoObjects_coll, firstGeoObject_1, ballon_aero, result, ch = 1;
     var markers = [];
     var markers_1 = [];
 	var point = [];
@@ -324,6 +325,80 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                             // получаем их координаты, для дальнейшего использования в построении ломаной авиамаршрута
 			            	point_aero[i] = distance_aero[i].geometry.getCoordinates();
 			             }
+
+                         // Логика по балуну первой метки авиамаршрута.
+                         // Вначале создаем сам балун - placemark.properties.set("balloonContentBody", ...
+                         placemark.properties.set("balloonContentBody",
+'<div id="menu">Прежде чем начать строить авиамаршрут, выберите необходимые данные по нему. И после, перетащите следующую точку на карте.<br /><br /><small style="color: #1D3B3B;">Укажите кол-во пассажиров:</small><br /> <input type="text" class="input-medium" id="col_text" name="col_text" style="width: 145px !important;" /><br /></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип полета:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Сonversely">Перелет туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Количество радиации в атмосфере:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/qKhPY0P5zQRTChD09SLAfjK__yQ.png" style="height: 20px" /></span><select name="rad_select" id="rad_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="middle">Среднее</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="small">Небольшое</option></select></div><div id="menu">');
+
+                         // Далее через проверку длины массива 'point_aero', определяем первую точку и в ней открываем балун. Обрабатываем данные от html-формы из балуна.
+                         if(distance_aero.length == 1)
+                         {
+                           placemark.balloon.open();
+
+                           // Если происходит ввод данных в текстовое поле, создаем обработчик события изменения в текстовом поле.
+                           $('#col_text').change(function(){
+                           // Получаем и выводим кол-во пассажиров на борту самолета.
+                           aero_num_people = $('input[name=col_text]').val();
+                           $(".route-length_travel").empty();
+                           $(".route-length_travel").append('<h3>Кол-во пассажирова на борту: <strong>' + aero_num_people + '</strong></h3>');
+                           });
+
+                           // При выборе опции select по типу полета, проверяем выбранное значение и выводим его в блоке справа от карты. Если значение не выбрано, добавляем предупреждающий текст.
+                           $('#route_select').change(function(){
+                           // Предварительно очищаем блок для вывода данных по типу маршрута, чтобы в нем ничего не было, после произведения выбора.
+                           $(".route-length_route").empty();
+                           // Присваиваем переменной 'type_route', выбранное значение из списка.
+                           type_aero = $('select[name=route_select] option:selected').val();
+
+                           if(type_aero == "Сonversely")
+                           {
+                             $(".route-length_route").append('<h3>Выбран перелет: <strong>туда и обратно</strong></h3>');
+                             num = 2.7;
+                           }
+                           else if(type_aero == "Forwards")
+                           {
+                             $(".route-length_route").append('<h3>Выбран перелет: <strong>только в одну сторону</strong></h3>');
+                             num = 1;
+                           }
+                           else
+                           {
+                             $(".route-length_route").append('<h3>Выберите пожалуйста тип полета.</h3>');
+                           }
+                           });
+
+                           // При выборе опции select по типу радиации, проверяем выбранное значение и выводим его в блоке справа от карты. Если значение не выбрано, добавляем предупреждающий текст.
+                           $('#rad_select').change(function(){
+                           // Предварительно очищаем блок для вывода данных по типу радиации, чтобы в нем ничего не было, после произведения выбора.
+                           $(".route-length_fuel").empty();
+                           // Присваиваем переменной 'type_rad', выбранное значение из списка.
+                           type_rad = $('select[name=rad_select] option:selected').val();
+
+                           if(type_rad == "middle")
+                           {
+                             $(".route-length_fuel").append('<h3>Радиация в атмосфере: <strong>средняя</strong></h3>');
+                             rad = 2;
+                           }
+                           else if(type_rad == "small")
+                           {
+                             $(".route-length_fuel").append('<h3>Радиация в атмосфере: <strong>небольшая</strong></h3>');
+                           }
+                           else
+                           {
+                             $(".route-length_fuel").append('<h3>Выберите пожалуйста тип радиации.</h3>');
+                             rad = 1;
+                           }
+                           });
+
+                         }
+                         // Иначе, если точка не первая, скрываем балун
+                         else
+                         {
+                           var closestObject_2 = arPlacemarksRez.getClosestTo(coordinates).balloon.open();
+                           //myMap.balloon.close();
+                           //placemark.properties.set("balloonContentBody", "Координаты точки: " + coord_aero_main);
+                         }
+
                          // console.log('init object', point_aero);
 
                          // производим геокодирование установленной на карте, метки
@@ -477,10 +552,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                           massa = 23,7;
                         }
 
-                        var num_people = 250;
+                        var num_people = aero_num_people;
 
                         // Основная формула вычисления углеродного следа:
-                        var co = (((distance_main_co/1000) * massa * 3.157) / 1000000)*1*2.7*num_people;
+                        var co = (((distance_main_co/1000) * massa * 3.157) / 1000000)*num*rad*num_people;
                         // округляем значение до одной цифры, после запятой.
                         var co_1 = co.toFixed(1);
 
@@ -496,7 +571,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                         //Если выбрано более одной точки, и начался строится маршрут, выводим информацию по нему.
                         if((point_aero.length > 1)){
-                          $(".route-length1").append('<H3>Выбран авиамаршрут:</H3> <h3>Расстояние авиаперелета: <strong>' + distance_aero_main + ' км.</strong></h3><small>Расстояние между выбранными точками, производится через вычисление длины большого круга(то есть это расстояние авиаперелета). Оно равно '+ distance_aero_main +' км.</small>');
+                          $(".route-length1").append('<h3>Расстояние авиаперелета: <strong>' + distance_aero_main + ' км.</strong></h3><small>Расстояние между выбранными точками, производится через вычисление длины большого круга(то есть это расстояние авиаперелета). Оно равно '+ distance_aero_main +' км.</small>');
                           $(".route-length1").append('<h3>Время авиаперелета: <strong>'+ h +'ч. ' + m +' мин.</strong></h3><small>Скорость самолета принята за 840 км/час. Приняты следующие допущения: учтены добавочные 15 минут на взлет и посадку, в среднем маршрут самолета длиннее расчетного на 10%.</small>');
                           $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main + ' км.</small>');
                         }
@@ -848,9 +923,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                             placemark.properties.set("balloonContentBody",
 '<div id="menu">Прежде чем начать строить автомаршрут, выберите необходимые данные по нему. И после, перетащите следующую точку на карте.<br /><br /> <small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
                             }
-
                             //console.log('init object', markers.length);
-                            // если выбран значок не 'самолетик', обрабатываем данные из формы балуна.
+                            // Если выбран значок не 'самолетик', а 'машинка', обрабатываем данные из формы балуна первой точки, по автомаршрутизации.
                             if(placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
                             if(markers.length == 1)
                             {
