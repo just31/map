@@ -396,7 +396,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          {
                            var closestObject_2 = arPlacemarksRez.getClosestTo(coordinates).balloon.open();
                            //myMap.balloon.close();
-                           //placemark.properties.set("balloonContentBody", "Координаты точки: " + coord_aero_main);
+                           placemark.properties.set("balloonContentBody", "Координаты точки: " + coord_aero_main);
                          }
 
                          // console.log('init object', point_aero);
