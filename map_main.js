@@ -360,7 +360,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            else if(type_aero == "Forwards")
                            {
                              $(".route-length_route").append('<h3>Выбран перелет: <strong>только в одну сторону</strong></h3>');
-                             num = 1;
+                             num = 1.0;
                            }
                            else
                            {
@@ -378,16 +378,16 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            if(type_rad == "middle")
                            {
                              $(".route-length_fuel").append('<h3>Радиация в атмосфере: <strong>средняя</strong></h3>');
-                             rad = 2;
+                             rad = 2.0;
                            }
                            else if(type_rad == "small")
                            {
                              $(".route-length_fuel").append('<h3>Радиация в атмосфере: <strong>небольшая</strong></h3>');
+                             rad = 1.0;
                            }
                            else
                            {
                              $(".route-length_fuel").append('<h3>Выберите пожалуйста тип радиации.</h3>');
-                             rad = 1;
                            }
                            });
 
@@ -472,6 +472,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          items.push({
                            title: "Удалить маршрут",
                            onClick: function () {
+                              // Очищаем блоки данных, с информацией по авиамаршруту. При нажатии на кнопку "Удалить маршрут". В контекстном меню метки.
+                              $(".route-length1").empty();
+                              $(".route-length2").empty();
+                              $(".route-length_fuel").empty();
+                              $(".route-length_travel").empty();
+                              $(".route-length_route").empty();
                               myMap.geoObjects.remove(myGeoObject);
                               // Удаление всех точек авиамаршрута, добавленных в массив distance_aero.
                               for(var j = 0, h = distance_aero.length; j < h; j++) {
