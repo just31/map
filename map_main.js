@@ -261,6 +261,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                                 iconImageOffset: [-(width / 2), -height],
                                 draggable: true,
                                 'visible': true,
+                                preset: 'twirl#airplaneIcon',
                                 balloonContentBodyLayout: myBalloonContentBodyLayout
                             };
 
@@ -317,8 +318,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          myMap.setZoom(5);
                          // добавляем новую метку на карту, с координатами ближайшего аэропорта.
                          myMap.geoObjects.add(createPlacemark(coord_aero_main, options));
-                         // делаем ее видимой
-                         placemark.options.set('visible', true);
+                         // делаем ее невидимой. Чтобы метка была заменена на значок вершины ломаной авиамаршрута.
+                         placemark.options.set('visible', false);
                          // добавляем выбранные точки в массив distance_aero
                          distance_aero.push(placemark);
                          for(var i = 0, l = distance_aero.length; i < l; i++) {
@@ -327,13 +328,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 			             }
 
                          // Логика по балуну первой метки авиамаршрута.
-                         // Вначале создаем сам балун - placemark.properties.set("balloonContentBody", ...
-                         placemark.properties.set("balloonContentBody",
-'<div id="menu">Прежде чем начать строить авиамаршрут, выберите необходимые данные по нему. И после, перетащите следующую точку на карте.<br /><br /><small style="color: #1D3B3B;">Укажите кол-во пассажиров:</small><br /> <input type="text" class="input-medium" id="col_text" name="col_text" style="width: 145px !important;" /><br /></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип полета:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Сonversely">Перелет туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Количество радиации в атмосфере:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/qKhPY0P5zQRTChD09SLAfjK__yQ.png" style="height: 20px" /></span><select name="rad_select" id="rad_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="middle">Среднее</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="small">Небольшое</option></select></div><div id="menu">');
-
-                         // Далее через проверку длины массива 'point_aero', определяем первую точку и в ней открываем балун. Обрабатываем данные от html-формы из балуна.
+                         // Через проверку длины массива 'point_aero', определяем первую точку и в ней открываем балун. Обрабатываем данные от html-формы из балуна.
                          if(distance_aero.length == 1)
                          {
+                           // Вначале создаем сам балун - placemark.properties.set("balloonContentBody", ...
+                           placemark.properties.set("balloonContentBody",
+'<div id="menu">Прежде чем начать строить авиамаршрут, выберите необходимые данные по нему. И после, перетащите следующую точку на карте.<br /><br /><small style="color: #1D3B3B;">Укажите кол-во пассажиров:</small><br /> <input type="text" class="input-medium" id="col_text" name="col_text" style="width: 145px !important;" /><br /></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип полета:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Сonversely">Перелет туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Количество радиации в атмосфере:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/qKhPY0P5zQRTChD09SLAfjK__yQ.png" style="height: 20px" /></span><select name="rad_select" id="rad_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="middle">Среднее</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="small">Небольшое</option></select></div><div id="menu">');
+
                            placemark.balloon.open();
 
                            // Если происходит ввод данных в текстовое поле, создаем обработчик события изменения в текстовом поле.
@@ -396,7 +397,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          {
                            var closestObject_2 = arPlacemarksRez.getClosestTo(coordinates).balloon.open();
                            //myMap.balloon.close();
-                           placemark.properties.set("balloonContentBody", "Координаты точки: " + coord_aero_main);
+                           //placemark.properties.set({"balloonContentBody": "Координаты точки: " + coord_aero_main + '<br />'});
                          }
 
                          // console.log('init object', point_aero);
@@ -462,16 +463,60 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          }
                          }, {
                          // Задаем опции геообъекта.
-                         // Выключаем возможность перетаскивания ломаной.
-                         draggable: false,
-                         // Цвет линии.
+                         // Цвет с прозрачностью.
                          strokeColor: "#336699",
-                         // Ширина линии.
+                         // Ширину линии.
                          strokeWidth: 5,
+                         //Добавляем в контекстное меню новый пункт, позволяющий удалить ломаную.
+                         editorMenuManager: function (items) {
+                         items.push({
+                           title: "Удалить маршрут",
+                           onClick: function () {
+                              myMap.geoObjects.remove(myGeoObject);
+                              // Удаление всех точек авиамаршрута, добавленных в массив distance_aero.
+                              for(var j = 0, h = distance_aero.length; j < h; j++) {
+		                        myMap.geoObjects.remove(distance_aero[j]);
+		                      }
+                              distance_aero = [];
+                              point_aero = [];
+                              // устанавливаем после удаления маршрута, новый центр и zoom карты.
+                              myMap.setCenter([55.752078, 37.621147], 8);
                          }
-                         );
+                         });
+                         return items;
+                         },
+                         //editorVertexLayout: ymaps.templateLayoutFactory.createClass('<div style="height:12px;width:12px;background-color:red;opacity:0.2;margin: -4px 0px 0px -4px;"></div>')
+                         // Cоздадим собственный макет для вершин ломаной.
+                         editorVertexLayout: ymaps.templateLayoutFactory.createClass('<div style="height:34px;width:35px;background: url(/f/min/images/airplane.png);margin: 0px 0px 0px -17px;"></div>'),
+                         // Cоздадим собственный макет для промежуточных точек ломаной.
+                         //editorEdgeLayout: ymaps.templateLayoutFactory.createClass('<div style="height:34px;width:35px;background: url(/f/min/images/airplane.png);margin: 0px 0px 0px -17px;"></div>')
+                         });
+
+                         /*
+                         // добавляем новую точку в конце линии по клику на карте
+                         myMap.events.add('click', function (e) {
+                         myGeoObject.insert(myGeoObject.getLength(), e.get('coordPosition'));
+                         });
+                         */
+
                          // Добавляем линию авиамаршрута на карту.
                          myMap.geoObjects.add(myGeoObject);
+
+                         /*
+                         // По совершению события изменения состояния редактора ломаной, добавляем в блок справа от карты поясняющий текст.
+                         myGeoObject.editor.events.add('statechange', function () {
+                           var p = 1;
+                           var p_array = [];
+                           p_array.push(p + 1);
+                           $(".route-length_route").empty();
+                           $(".route-length_route").append('<br /><h3>Событие изменения маршрута <strong>произошло ' + p_array +  ' раз</strong></h3>');
+                         });
+                         */
+
+                         // Включаем режим редактирования ломаной.
+                         myGeoObject.editor.startEditing();
+                         // Включаем режим добавления новых вершин в ломаную линию.
+                         //myGeoObject.editor.startDrawing();
 
                          if(point_aero.length > 1){
                           // Устанавливаем центр и масштаб карты так, чтобы отобразить всю прямую авиамаршрута целиком. Устанавливаем на карте границы линии авиамаршрута.
@@ -571,9 +616,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                         //Если выбрано более одной точки, и начался строится маршрут, выводим информацию по нему.
                         if((point_aero.length > 1)){
+                          // Проверяем события: изменения состояния редактора ломаной и изменения в опциях геообъекта. На основе его изменяем информацию в блоке справа от карты. Пока под вопросом..?
+                          myGeoObject.editor.events.add(["optionschange", "statechange"], function () {
+                          // Очищаем данные после каждого совершения событий.
+                          $(".route-length1").empty();
                           $(".route-length1").append('<h3>Расстояние авиаперелета: <strong>' + distance_aero_main + ' км.</strong></h3><small>Расстояние между выбранными точками, производится через вычисление длины большого круга(то есть это расстояние авиаперелета). Оно равно '+ distance_aero_main +' км.</small>');
                           $(".route-length1").append('<h3>Время авиаперелета: <strong>'+ h +'ч. ' + m +' мин.</strong></h3><small>Скорость самолета принята за 840 км/час. Приняты следующие допущения: учтены добавочные 15 минут на взлет и посадку, в среднем маршрут самолета длиннее расчетного на 10%.</small>');
                           $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main + ' км.</small>');
+                        });
                         }
 
                        }
@@ -1141,6 +1191,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              myPlacemark.properties.set("balloonContentBody",
 '<div id="menu">Прежде чем начать строить автомаршрут, выберите необходимые данные по нему. И после, установите следующую точку на карте.<br /><br /> <small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
 
+             //console.log('init object', markers.length);
              if(markers.length == 1)
              {
               // Если отмечена первая метка, открываем балун с выбором данных по маршруту.
