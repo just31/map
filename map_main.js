@@ -487,8 +487,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            model_point = myGeoObject.editor.getModel().getPixels();
                            // получаем из глобальных пикс. координат, гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
                            for(var i = 0, l = model_point.length; i < l; i++) {
-			            	 model_point_aero[i] = model_point[i];
-                             model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point_aero[i], myMap.getZoom());
+                             model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point[i], myMap.getZoom());
 			               }
                            /*
                            //перевести пиксельные координаты вершины в гео координаты:
@@ -648,6 +647,130 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                           $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main + ' км.</small>');
                         //});
                         }
+
+                         // Отслеживаем событие добавления новой вершины ломаной, через редактор контекстного меню
+                         myGeoObject.editor.events.add("vertexadd", function () {
+                           $(".route-length1").empty();
+                           // узнаем тип системы координат
+                           var coordSystem_2 = myMap.options.get('projection').getCoordSystem(),
+                           distance_aero_length_2 = 0;
+                           // получаем массив пиксельных координат, моделей вершин ломаной
+                           model_point1 = myGeoObject.editor.getModel().getPixels();
+                           // переводим глобальные пикс. координаты, в гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
+                           for(var i = 0, l = model_point1.length; i < l; i++) {
+                             model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point1[i], myMap.getZoom());
+                             point_aero[i] = myMap.options.get('projection').fromGlobalPixels(model_point1[i], myMap.getZoom());
+			               }
+                           // вычисляем общую длину ломаной, через кол-во ее точек
+                           for (var w = 0, d = myGeoObject.geometry.getLength() - 1; w < d; w++) {
+                             distance_aero_length_2 += Math.round(coordSystem_2.getDistance(model_point_coord[w], model_point_coord[w + 1]))/1000;
+                           }
+                           // округленное, общее расстояние ломаной авиамаршрута
+                           var distance_aero_main_2 = Math.ceil(distance_aero_length_2);
+
+                           // Получение координат точек, для формулы вычисления углеродного следа
+                           // получаем координаты первой точки авиамаршрута.
+                           var point_first = point_aero[0];
+                           // получаем значения широты и долготоы первой точки.
+                           var point_first_lat = point_aero[0][0];
+                           var point_first_lon = point_aero[0][1];
+
+                           // получаем координаты второй точки авиамаршрута.
+                           var point_two = point_aero[1];
+                           // получаем значения широты и долготоы второй точки.
+                           var point_two_lat = point_aero[1][0];
+                           var point_two_lon = point_aero[1][1];
+
+                           // перевести координаты в радианы
+                           var lat1 = point_first_lat * Math.PI / 180;
+                           var lat2 = point_two_lat * Math.PI / 180;
+                           var long1 = point_first_lon * Math.PI / 180;
+                           var long2 = point_two_lon * Math.PI / 180;
+
+                           // косинусы и синусы широт и разницы долгот
+                           var cl1 = Math.cos(lat1);
+                           var cl2 = Math.cos(lat2);
+                           var sl1 = Math.sin(lat1);
+                           var sl2 = Math.sin(lat2);
+                           var delta = long2 - long1;
+                           var cdelta = Math.cos(delta);
+                           var sdelta = Math.sin(delta);
+
+                           //формула вычисления длины большого круга
+                           var y = Math.sqrt(Math.pow(cl2 * sdelta, 2) + Math.pow(cl1 * sl2 - sl1 * cl2 * cdelta, 2));
+                           var x = sl1 * sl2 + cl1 * cl2 * cdelta;
+
+                           // получение длин отрезков ломаной
+                           var points_aero_num = myGeoObject.geometry.getLength();
+
+                           var ad = Math.atan2(y, x) * points_aero_num;
+
+                           // формула получения расстояния перелета, через вычисление длины большого круга, между двумя выбранными точками на карте. Для авиамаршрута.
+                           // расстояние перелета в км,
+                           var dist = (ad * 6372795)/1000;
+                           var dist_1 = dist.toFixed(0);
+                           // расстояние перелета в м, необходимо для вычисления длины углеродного следа.
+                           var dist_co = (ad * 6372795);
+                           var distance_main_co = (ad * 6372795);
+
+                           //формула вычисления углеродного следа, при полете на самолете. Данные:
+                           var massa = 22.5; //Удельный вес на пасажира
+                           if (dist < 550) {
+                             massa = 46.0;
+                           } else if (dist < 1500) {
+                             massa = 38.2;
+                           } else if (dist < 5500) {
+                             massa = 23,7;
+                           }
+
+                           var num_people = aero_num_people;
+
+                          // Основная формула вычисления углеродного следа:
+                          var co = (((distance_main_co/1000) * massa * 3.157) / 1000000)*num*rad*num_people;
+                          // округляем значение до одной цифры, после запятой.
+                          var co_1 = co.toFixed(1);
+
+                          //формула перевода часов и десятичных долей часа, в часы, минуты и секунды
+                          var nTime = (distance_aero_main_2/840)+0.5;
+                          nTime=Number(nTime);
+	                      nTime+=1/7200000;  //коррекция на половинку тысячной секунды
+
+	                      var h= Math.floor(nTime);
+	                      var mT=(nTime-h)*60;
+	                      var m=Math.floor(mT);
+	                      var s=((mT-m)*60);
+
+                          $(".route-length1").append('<h3>Расстояние авиаперелета: <strong>' + distance_aero_main_2 + ' км.</strong></h3><small>Расстояние между выбранными точками, производится через вычисление длины большого круга(то есть это расстояние авиаперелета). Оно равно '+ distance_aero_main_2 +' км.</small>');
+                          $(".route-length1").append('<h3>Время авиаперелета: <strong>'+ h +'ч. ' + m +' мин.</strong></h3><small>Скорость самолета принята за 840 км/час. Приняты следующие допущения: учтены добавочные 15 минут на взлет и посадку, в среднем маршрут самолета длиннее расчетного на 10%.</small>');
+                          $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main_2 + ' км.</small>');
+                          //console.log('Расстояние авиаперелета!:' + distance_aero_main_2 + 'км');
+                          //console.log('Расстояние авиаперелета - примерно ...км');
+                          //console.log(model_point_coord);
+                         });
+
+                         /*
+                         // Отслеживаем событие изменения геометрии всей ломаной авиамаршрута. При удалении вершин.
+                         myGeoObject.events.add("geometrychange", function () {
+                           // узнаем тип системы координат
+                           var coordSystem_3 = myMap.options.get('projection').getCoordSystem(),
+                           distance_aero_length_3 = 0;
+                           // получаем массив пиксельных координат, моделей вершин ломаной
+                           model_point2 = myGeoObject.editor.getModel().getPixels();
+                           // переводим глобальные пикс. координаты, в гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
+                           for(var i = 0, l = model_point2.length; i < l; i++) {
+                             model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point2[i], myMap.getZoom());
+			               }
+                           // вычисляем общую длину ломаной, через кол-во ее точек
+                           for (var b = 0, v = myGeoObject.geometry.getLength() - 1; b < v; b++) {
+                             distance_aero_length_3 += Math.round(coordSystem_3.getDistance(model_point_coord[b], model_point_coord[b + 1]))/1000;
+                           }
+                           // округленное, общее расстояние ломаной авиамаршрута
+                           var distance_aero_main_3 = Math.ceil(distance_aero_length_3);
+                           console.log('Расстояние авиаперелета!:' + distance_aero_main_3 + 'км');
+                           //console.log('Расстояние авиаперелета - примерно ...км');
+                           //console.log(model_point_coord);
+                         });
+                         */
 
                        }
                        // завершение работы по списку аэропортов
