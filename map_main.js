@@ -78,6 +78,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     var distance_aero = [];
     var point_aero = [];
     var way_m_paths = [];
+    var model_point = [];
+    var model_point_aero = [];
+    var model_point_coord = [];
+    var model_coord;
     var myCollection;
     // делаем переменную myCollection, глобальной, чтобы можно было ее значение передавать из ajaх запроса. При получении списка аэропортов из aero1.csv.
     window.globalvar = myCollection;
@@ -327,6 +331,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 			            	point_aero[i] = distance_aero[i].geometry.getCoordinates();
 			             }
 
+                         //myMap.geoObjects.remove(placemark);
+
                          // Логика по балуну первой метки авиамаршрута.
                          // Через проверку длины массива 'point_aero', определяем первую точку и в ней открываем балун. Обрабатываем данные от html-формы из балуна.
                          if(distance_aero.length == 1)
@@ -467,26 +473,62 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          strokeColor: "#336699",
                          // Ширину линии.
                          strokeWidth: 5,
+                         // Редактируем контекстное меню, вершин ломаной
+                         editorMenuManager: function (items, model) {
                          //Добавляем в контекстное меню новый пункт, позволяющий удалить ломаную.
-                         editorMenuManager: function (items) {
                          items.push({
+                         id: 'addStation',
+                         title: "Вывести дистанцию маршрута в консоль",
+                         onClick: function() {
+                           // узнаем тип системы координат
+                           var coordSystem_1 = myMap.options.get('projection').getCoordSystem(),
+                           distance_aero_length_1 = 0;
+                           // получаем массив пиксельных координат, моделей вершин ломаной
+                           model_point = myGeoObject.editor.getModel().getPixels();
+                           // получаем из глобальных пикс. координат, гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
+                           for(var i = 0, l = model_point.length; i < l; i++) {
+			            	 model_point_aero[i] = model_point[i];
+                             model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point_aero[i], myMap.getZoom());
+			               }
+                           /*
+                           //перевести пиксельные координаты вершины в гео координаты:
+                            var vertex = event.get('target'),
+                            vertexCoords = vertex.geometry.getCoordinates(),
+                            zoom = geoMap.getZoom(),
+                            vertexGlobalPixels = vertex.options.get("projection").toGlobalPixels(vertexCoords, zoom),
+                            geoCoords = geoMap.options.get("projection").fromGlobalPixels(vertexGlobalPixels, zoom);
+                           */
+                           // вычисляем общую длину ломаной, через кол-во ее точек
+                           for (var f = 0, n = myGeoObject.geometry.getLength() - 1; f < n; f++) {
+                             distance_aero_length_1 += Math.round(coordSystem_1.getDistance(model_point_coord[f], model_point_coord[f + 1]))/1000;
+                           }
+                           // округленное, общее расстояние ломаной авиамаршрута
+                           var distance_aero_main_1 = Math.ceil(distance_aero_length_1);
+                           //console.log(model.geometry.getCoordinates(), model.getPixels());
+                           //console.log(myGeoObject.editor.getModel().getVertexModels());
+                           console.log('Расстояние авиаперелета:' + distance_aero_main_1 + 'км');
+                         }
+                         });
+                         //Добавляем в контекстное меню новый пункт, позволяющий удалить ломаную.
+                         items.push({
+                           id: "routedelete",
                            title: "Удалить маршрут",
                            onClick: function () {
-                              // Очищаем блоки данных, с информацией по авиамаршруту. При нажатии на кнопку "Удалить маршрут". В контекстном меню метки.
-                              $(".route-length1").empty();
-                              $(".route-length2").empty();
-                              $(".route-length_fuel").empty();
-                              $(".route-length_travel").empty();
-                              $(".route-length_route").empty();
-                              myMap.geoObjects.remove(myGeoObject);
-                              // Удаление всех точек авиамаршрута, добавленных в массив distance_aero.
-                              for(var j = 0, h = distance_aero.length; j < h; j++) {
-		                        myMap.geoObjects.remove(distance_aero[j]);
-		                      }
-                              distance_aero = [];
-                              point_aero = [];
-                              // устанавливаем после удаления маршрута, новый центр и zoom карты.
-                              myMap.setCenter([55.752078, 37.621147], 8);
+                           // Очищаем блоки данных, с информацией по авиамаршруту. При нажатии на кнопку "Удалить маршрут". В контекстном меню метки.
+                           $(".route-length1").empty();
+                           $(".route-length2").empty();
+                           $(".route-length_fuel").empty();
+                           $(".route-length_travel").empty();
+                           $(".route-length_route").empty();
+                           myMap.geoObjects.remove(myGeoObject);
+                           // Удаление всех точек авиамаршрута, добавленных в массив distance_aero.
+                           for(var j = 0, h = distance_aero.length; j < h; j++) {
+		                   myMap.geoObjects.remove(distance_aero[j]);
+		                   }
+                           distance_aero = [];
+                           point_aero = [];
+                           // устанавливаем после удаления маршрута, новый центр и zoom карты.
+                           myMap.setCenter([55.752078, 37.621147], 8);
                          }
                          });
                          return items;
@@ -498,26 +540,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          //editorEdgeLayout: ymaps.templateLayoutFactory.createClass('<div style="height:34px;width:35px;background: url(/f/min/images/airplane.png);margin: 0px 0px 0px -17px;"></div>')
                          });
 
-                         /*
-                         // добавляем новую точку в конце линии по клику на карте
-                         myMap.events.add('click', function (e) {
-                         myGeoObject.insert(myGeoObject.getLength(), e.get('coordPosition'));
-                         });
-                         */
-
                          // Добавляем линию авиамаршрута на карту.
                          myMap.geoObjects.add(myGeoObject);
-
-                         /*
-                         // По совершению события изменения состояния редактора ломаной, добавляем в блок справа от карты поясняющий текст.
-                         myGeoObject.editor.events.add('statechange', function () {
-                           var p = 1;
-                           var p_array = [];
-                           p_array.push(p + 1);
-                           $(".route-length_route").empty();
-                           $(".route-length_route").append('<br /><h3>Событие изменения маршрута <strong>произошло ' + p_array +  ' раз</strong></h3>');
-                         });
-                         */
 
                          // Включаем режим редактирования ломаной.
                          myGeoObject.editor.startEditing();
@@ -547,19 +571,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         // получаем значения широты и долготоы первой точки.
                         var point_first_lat = point_aero[0][0];
                         var point_first_lon = point_aero[0][1];
-                        //console.log('init object', point_first);
-                        //console.log('init object', point_first_lat);
-                        //console.log('init object', point_first_lon);
-
 
                         // получаем координаты второй точки авиамаршрута.
                         var point_two = point_aero[1];
                         // получаем значения широты и долготоы второй точки.
                         var point_two_lat = point_aero[1][0];
                         var point_two_lon = point_aero[1][1];
-                        //console.log('init object', point_first);
-                        //console.log('init object', point_two_lat);
-                        //console.log('init object', point_two_lon);
 
                         // перевести координаты в радианы
                         var lat1 = point_first_lat * Math.PI / 180;
