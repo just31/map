@@ -69,7 +69,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
   Map.prototype.createMap = function () {
 
     var route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_fuel, type_travel, aero_num_people, type_aero, type_rad,
-    num, rad, type_route, way_m, way_m_upd, visibleObjects, mGeocoder, geoObjects_coll, firstGeoObject_1, ballon_aero, result, ch = 1;
+    num, rad, type_route, way_m, way_m_upd, visibleObjects, mGeocoder, geoObjects_coll, firstGeoObject_1, ballon_aero, result, ch = 1, distance_aero_length;
     var markers = [];
     var markers_1 = [];
 	var point = [];
@@ -81,6 +81,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     var model_point = [];
     var model_point_aero = [];
     var model_point_coord = [];
+    var model_point2 = [];
     var model_coord;
     var myCollection;
     // делаем переменную myCollection, глобальной, чтобы можно было ее значение передавать из ajaх запроса. При получении списка аэропортов из aero1.csv.
@@ -473,9 +474,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          strokeColor: "#336699",
                          // Ширину линии.
                          strokeWidth: 5,
+                         /*
                          // Редактируем контекстное меню, вершин ломаной
-                         editorMenuManager: function (items, model) {
-                         //Добавляем в контекстное меню новый пункт, позволяющий удалить ломаную.
+                         editorMenuManager: function (editorItems, model) {
+                         //Добавляем в контекстное меню новый пункт, позволяющий выводить данные о расстоянии маршрута в консоль.
                          items.push({
                          id: 'addStation',
                          title: "Вывести дистанцию маршрута в консоль",
@@ -489,14 +491,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            for(var i = 0, l = model_point.length; i < l; i++) {
                              model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point[i], myMap.getZoom());
 			               }
-                           /*
-                           //перевести пиксельные координаты вершины в гео координаты:
-                            var vertex = event.get('target'),
-                            vertexCoords = vertex.geometry.getCoordinates(),
-                            zoom = geoMap.getZoom(),
-                            vertexGlobalPixels = vertex.options.get("projection").toGlobalPixels(vertexCoords, zoom),
-                            geoCoords = geoMap.options.get("projection").fromGlobalPixels(vertexGlobalPixels, zoom);
-                           */
                            // вычисляем общую длину ломаной, через кол-во ее точек
                            for (var f = 0, n = myGeoObject.geometry.getLength() - 1; f < n; f++) {
                              distance_aero_length_1 += Math.round(coordSystem_1.getDistance(model_point_coord[f], model_point_coord[f + 1]))/1000;
@@ -509,7 +503,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          }
                          });
                          //Добавляем в контекстное меню новый пункт, позволяющий удалить ломаную.
-                         items.push({
+                         editorItems.push({
                            id: "routedelete",
                            title: "Удалить маршрут",
                            onClick: function () {
@@ -530,13 +524,77 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            myMap.setCenter([55.752078, 37.621147], 8);
                          }
                          });
-                         return items;
-                         },
+                         return editorItems;
+                         },*/
                          //editorVertexLayout: ymaps.templateLayoutFactory.createClass('<div style="height:12px;width:12px;background-color:red;opacity:0.2;margin: -4px 0px 0px -4px;"></div>')
                          // Cоздадим собственный макет для вершин ломаной.
                          editorVertexLayout: ymaps.templateLayoutFactory.createClass('<div style="height:34px;width:35px;background: url(/f/min/images/airplane.png);margin: 0px 0px 0px -17px;"></div>'),
                          // Cоздадим собственный макет для промежуточных точек ломаной.
                          //editorEdgeLayout: ymaps.templateLayoutFactory.createClass('<div style="height:34px;width:35px;background: url(/f/min/images/airplane.png);margin: 0px 0px 0px -17px;"></div>')
+                         });
+
+                         // Редактируем контекстное меню, вершин ломаной. Получаем значения 'id' стандартных пунктов меню.
+                         myGeoObject.editor.options.set({
+                          menuManager:function(editorItems, model){
+                            console.log(editorItems);
+                            console.log(model);
+                            for(var i=0; i<editorItems.length; i++){
+                            console.log(editorItems[i].id);
+                            if(editorItems[i].id==='removeVertex') editorItems[i].title='Удалить вершину';
+                            if(editorItems[i].id==='startDrawing') editorItems[i].title='Продолжить редактирование';
+                            if(editorItems[i].id==='stopDrawing') editorItems[i].title='Завершить редактирование';
+                            if(editorItems[i].id==='addInterior') editorItems.splice(i, 1);
+                            }
+                            //Добавляем в контекстное меню новый пункт, позволяющий удалить ломаную.
+                            editorItems.push({
+                              id: "routedelete",
+                              title: "Удалить маршрут",
+                              onClick: function () {
+                              // Очищаем блоки данных, с информацией по авиамаршруту. При нажатии на кнопку "Удалить маршрут". В контекстном меню метки.
+                              $(".route-length1").empty();
+                              $(".route-length2").empty();
+                              $(".route-length_fuel").empty();
+                              $(".route-length_travel").empty();
+                              $(".route-length_route").empty();
+                              myMap.geoObjects.remove(myGeoObject);
+                              // Удаление всех точек авиамаршрута, добавленных в массив distance_aero.
+                              for(var j = 0, h = distance_aero.length; j < h; j++) {
+		                      myMap.geoObjects.remove(distance_aero[j]);
+		                      }
+                              distance_aero = [];
+                              point_aero = [];
+                              // устанавливаем после удаления маршрута, новый центр и zoom карты.
+                              myMap.setCenter([55.752078, 37.621147], 8);
+                            }
+                            });
+                          return editorItems;
+                          },
+
+                         });
+
+                         // создаем монитор, отслеживающий включение режима рисования, новой вершины ломаной.
+                         var stateMonitor = new ymaps.Monitor(myGeoObject.editor.state);
+
+                         // Начинаем наблюдать за изменением поля 'drawing', при начале рисования/добавления новой вершины ломаной. В редакторе вершин. При совершении события, вычисляем длину авиамаршрута, выводим ее в консоль.
+                         stateMonitor.add("drawing", function (newValue, oldValue) {
+                           // получаем массив пиксельных координат, моделей вершин ломаной
+                           model_point1 = myGeoObject.editor.getModel().getPixels();
+
+                           // получаем массив гео координат, моделей вершин ломаной
+                           for(var j = 0, k = model_point1.length; j < k; j++) {
+                              model_point_coord[j] = myMap.options.get('projection').fromGlobalPixels(model_point1[j], myMap.getZoom());
+                              //point_aero[j] = myMap.options.get('projection').fromGlobalPixels(model_point1[j], myMap.getZoom());
+			               }
+                           // вычисляем общую длину ломаной, через кол-во ее точек
+                           for (var w = 0, d = myGeoObject.geometry.getLength() - 1; w < d; w++) {
+                              distance_aero_length += Math.round(coordSystem.getDistance(model_point_coord[w], model_point_coord[w + 1]))/1000;
+                           }
+
+                           // Округленное, общее расстояние ломаной авиамаршрута. Делим на 2, т.к. при включении режима рисования вершины(изменение myGeoObject.editor.state).
+                           // Будет браться уже подсчитанное до этого расстояние, при перетягивании меток из тулбара, и умножаться на 2.
+                           var distance_aero_main = Math.ceil(distance_aero_length)/2 + 'км';
+                           console.log('init object', distance_aero_main);
+                           console.log('init object', myGeoObject.editorMenuManager);
                          });
 
                          // Добавляем линию авиамаршрута на карту.
@@ -547,6 +605,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // Включаем режим добавления новых вершин в ломаную линию.
                          //myGeoObject.editor.startDrawing();
 
+                         // получаем значение поля 'drawing' редактора. Для передачи его в отслеживающий монитор 'stateMonitor'.
+                         myGeoObject.editor.state.get('drawing');
+
                          if(point_aero.length > 1){
                           // Устанавливаем центр и масштаб карты так, чтобы отобразить всю прямую авиамаршрута целиком. Устанавливаем на карте границы линии авиамаршрута.
                           myMap.setBounds(myGeoObject.geometry.getBounds());
@@ -556,13 +617,40 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // узнаем тип системы координат
                          var coordSystem = myMap.options.get('projection').getCoordSystem(),
                          distance_aero_length = 0;
+                         /*
                          // вычисляем общую длину ломаной, через кол-во ее точек
                          for (var j = 0, k = myGeoObject.geometry.getLength() - 1; j < k; j++) {
                            distance_aero_length += Math.round(coordSystem.getDistance(point_aero[j], point_aero[j + 1]))/1000;
                          }
 
-                        // общее расстояние ломаной авиамаршрута
-                        var distance_aero_main = distance_aero_length.toFixed(0);
+                         // общее расстояние ломаной авиамаршрута
+                         var distance_aero_main = distance_aero_length.toFixed(0);
+                         */
+
+                         // получаем массив пиксельных координат, моделей вершин ломаной
+                         model_point1 = myGeoObject.editor.getModel().getPixels();
+                         // переводим глобальные пикс. координаты, в гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
+
+                         /*
+                         // получаем массив пиксельных координат, моделей вершин ломаной
+                         myGeoObject.events.add("geometrychange", function (event) {
+                            model_point2 = myGeoObject.editor.getModel().getPixels();
+                            //console.log('init object', model_point2);
+                         }, this);
+                         console.log('init object', model_point2);
+                         */
+
+                         for(var j = 0, k = model_point1.length; j < k; j++) {
+                             model_point_coord[j] = myMap.options.get('projection').fromGlobalPixels(model_point1[j], myMap.getZoom());
+                             point_aero[j] = myMap.options.get('projection').fromGlobalPixels(model_point1[j], myMap.getZoom());
+			             }
+                         // вычисляем общую длину ломаной, через кол-во ее точек
+                         for (var w = 0, d = myGeoObject.geometry.getLength() - 1; w < d; w++) {
+                             distance_aero_length += Math.round(coordSystem.getDistance(model_point_coord[w], model_point_coord[w + 1]))/1000;
+                         }
+
+                         // округленное, общее расстояние ломаной авиамаршрута
+                         distance_aero_main = Math.ceil(distance_aero_length);
 
                         // Получение координат точек, для формулы вычисления углеродного следа
                         // получаем координаты первой точки авиамаршрута.
@@ -649,7 +737,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         }
 
                          // Отслеживаем событие добавления новой вершины ломаной, через редактор контекстного меню
-                         myGeoObject.editor.events.add("vertexadd", function () {
+                         myGeoObject.editor.events.add(["vertexadd", "vertexdragend"], function () {
                            $(".route-length1").empty();
                            // узнаем тип системы координат
                            var coordSystem_2 = myMap.options.get('projection').getCoordSystem(),
@@ -659,7 +747,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            // переводим глобальные пикс. координаты, в гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
                            for(var i = 0, l = model_point1.length; i < l; i++) {
                              model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point1[i], myMap.getZoom());
-                             point_aero[i] = myMap.options.get('projection').fromGlobalPixels(model_point1[i], myMap.getZoom());
+                             //point_aero[i] = myMap.options.get('projection').fromGlobalPixels(model_point1[i], myMap.getZoom());
 			               }
                            // вычисляем общую длину ломаной, через кол-во ее точек
                            for (var w = 0, d = myGeoObject.geometry.getLength() - 1; w < d; w++) {
