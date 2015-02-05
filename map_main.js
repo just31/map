@@ -335,7 +335,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          //myMap.geoObjects.remove(placemark);
 
                          // Логика по балуну первой метки авиамаршрута.
-                         // Через проверку длины массива 'point_aero', определяем первую точку и в ней открываем балун. Обрабатываем данные от html-формы из балуна.
+                         // Через проверку длины массива 'distance_aero', определяем первую точку и в ней открываем балун. Обрабатываем данные от html-формы из балуна.
                          if(distance_aero.length == 1)
                          {
                            // Вначале создаем сам балун - placemark.properties.set("balloonContentBody", ...
@@ -399,7 +399,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            });
 
                          }
-                         // Иначе, если точка не первая, скрываем балун
+                         // Иначе, если точка не первая, открываем балун с названием аэропорта
                          else
                          {
                            var closestObject_2 = arPlacemarksRez.getClosestTo(coordinates).balloon.open();
@@ -536,8 +536,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // Редактируем контекстное меню, вершин ломаной. Получаем значения 'id' стандартных пунктов меню.
                          myGeoObject.editor.options.set({
                           menuManager:function(editorItems, model){
-                            console.log(editorItems);
-                            console.log(model);
+                            //console.log(editorItems);
+                            //console.log(model);
                             for(var i=0; i<editorItems.length; i++){
                             console.log(editorItems[i].id);
                             //if(editorItems[i].id==='removeVertex') editorItems[i].title='Удалить вершину';
@@ -545,27 +545,29 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                             if(editorItems[i].id==='stopDrawing') editorItems[i].title='Завершить маршрут';
                             if(editorItems[i].id==='addInterior') editorItems.splice(i, 1);
                             }
-                            // Если выбран пункт "Удалить", заменяем его 'title', на "Удалить вершину". Переопределяем функцию обработчик, по событию 'onClick'. Делаем перерасчет длины ломаной авиамаршрута.
+                            // Если выбран пункт "Удалить", заменяем его 'title', на "Удалить метку". Переопределяем функцию обработчик, по событию 'onClick'. Делаем перерасчет длины ломаной авиамаршрута.
                             if(editorItems[0].id==='removeVertex'){
-                               editorItems[0].title='Удалить метку';
-                               editorItems[0].onClick = function() {
-                               // Очищаем блок данных маршрута, справа от карты. Для обновления информации в нем, по каждому клику "Удалить вершину".
-                               $(".route-length1").empty();
-                               // Определяем индекс удаляемой вершины
-                               var vertexIndex = model.getIndex();
-                               console.log(vertexIndex);
-                               // Удаляем вершину по полученному индексу.
-                               //myGeoObject.geometry.splice(myGeoObject.geometry.getLength() - 1, 1); // удаление последней вершины ломаной
-                               myGeoObject.geometry.remove(vertexIndex);
-                               //editorItems[0].onClick = function(event) {
-                               //event = event || window.event;
-                               //var target = event.target || event.srcElement; // (1 корневой элемент на котором произошло событие)
-                               //if(target == this){
-                               // узнаем тип системы координат
-                               var coordSystem_1 = myMap.options.get('projection').getCoordSystem(),
-                               distance_aero_length_1 = 0;
-                               // // получаем массив пиксельных данных модели ломаной, из объекта-обещания
-                               model_point = myGeoObject.editor.getModel().getPixels();
+                              editorItems[0].title='Удалить метку';
+                              editorItems[0].onClick = function() {
+                              // Очищаем блок данных маршрута, справа от карты. Для обновления информации в нем, по каждому клику "Удалить вершину".
+                              $(".route-length1").empty();
+                              // закрываем открытые балуны на карте
+                              myMap.balloon.close();
+                              // Определяем индекс удаляемой вершины
+                              var vertexIndex = model.getIndex();
+                              //console.log(vertexIndex);
+                              // Удаляем вершину по полученному индексу.
+                              //myGeoObject.geometry.splice(myGeoObject.geometry.getLength() - 1, 1); // удаление последней вершины ломаной
+                              myGeoObject.geometry.remove(vertexIndex);
+                              //editorItems[0].onClick = function(event) {
+                              //event = event || window.event;
+                              //var target = event.target || event.srcElement; // (1 корневой элемент на котором произошло событие)
+                              //if(target == this){
+                              // узнаем тип системы координат
+                              var coordSystem_1 = myMap.options.get('projection').getCoordSystem(),
+                              distance_aero_length_1 = 0;
+                              // // получаем массив пиксельных данных модели ломаной, из объекта-обещания
+                              model_point = myGeoObject.editor.getModel().getPixels();
                               // получаем из глобальных пикс. координат, гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
                               for(var w = 0, d = model_point.length; w < d; w++) {
                                 model_point_coord[w] = myMap.options.get('projection').fromGlobalPixels(model_point[w], myMap.getZoom());
@@ -676,6 +678,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                               for(var j = 0, h = distance_aero.length; j < h; j++) {
 		                      myMap.geoObjects.remove(distance_aero[j]);
 		                      }
+                              // очищаем массивы геокодированных точек маршрута и массивы самих точек маршрута.
+                              geo_points = [];
+                              point_geo = [];
                               distance_aero = [];
                               point_aero = [];
                               // устанавливаем после удаления маршрута, новый центр и zoom карты.
@@ -708,8 +713,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            // Округленное, общее расстояние ломаной авиамаршрута. Делим на 2, т.к. при включении режима рисования вершины(изменение myGeoObject.editor.state).
                            // Будет браться уже подсчитанное до этого расстояние, при перетягивании меток из тулбара, и умножаться на 2.
                            var distance_aero_main = Math.ceil(distance_aero_length)/2 + 'км';
-                           console.log('init object', distance_aero_main);
-                           console.log('init object', myGeoObject.editorMenuManager);
+                           //console.log('init object', distance_aero_main);
+                           //console.log('init object', myGeoObject.editorMenuManager);
                          });
 
                          // Добавляем линию авиамаршрута на карту.
@@ -864,6 +869,75 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                              model_point_coord[i] = myMap.options.get('projection').fromGlobalPixels(model_point1[i], myMap.getZoom());
                              //point_aero[i] = myMap.options.get('projection').fromGlobalPixels(model_point1[i], myMap.getZoom());
 			               }
+
+                           //СОЗДАЕМ МЕХАНИЗМ ОПРЕДЕЛЕНИЯ БЛИЖ. АЭРОПОРТА К ДОБАВЛЕННОЙ ВЕРШИНЕ ЛОМАНОЙ. И ГЕОКОДИРОВАНИЯ ПОЛУЧЕННЫХ ТОЧЕК ВЕРШИН. В РЕЖИМЕ РЕДАКТИРОВАНИЯ ЛОМАНОЙ ПО СОБЫТИЮ 'VERTEXADD'.
+                           var lastItem = model_point_coord[model_point_coord.length-1];
+                           console.log(lastItem);
+                           // Находим ближайший объект(аэропорт) из геоколлекции myCollection. К выбранной вершине.
+                           var closestObject = arPlacemarksRez.getClosestTo(lastItem);
+                           //Открываем балун с названием ближайшего к выбранной вершине, аэропорта.
+                           var closestObject_1 = arPlacemarksRez.getClosestTo(lastItem).balloon.open();
+
+                           // получаем координаты ближ. аэропорта. Записываем их в массив coord_aero.
+                           var coord_aero = 0;
+                           coord_aero = closestObject.geometry.getCoordinates();
+                           // получаем отд. строковые значения широты и долготы точки аэропорта и приводим их к числовому значению.
+                           var coord_aero_lat = coord_aero[0] - 0;
+                           // альтернативный вариант преобразования строки в число. Таким же образом можно преобразовать и значение долготы точки coord_aero_lon.
+                           //var coord_aero_lat = Number(coord_aero[0]);
+                           var coord_aero_lon = coord_aero[1] - 0;
+                           // помещаем оба значения в массив coord_aero_main, для использования его в геокодировании найденной точки аэропорта.
+                           var coord_aero_main = [coord_aero_lat, coord_aero_lon];
+
+                           // удаляем основную метку, добавленную выше myMap.geoObjects.add(createPlacemark(coordinates, options));. Чтобы заменить ее новой по координатам найденного аэропорта.
+                           myMap.geoObjects.remove(placemark);
+
+                           // производим геокодирование установленной на карте, новой вершины ломаной
+                           ymaps.geocode(coord_aero_main).then(function (res) {
+                           firstGeoObject_1 = res.geoObjects.get(0);
+                           var firstGeoObject_text_1 = firstGeoObject_1.properties.get('text');
+                           // собираем информацию о всех вершинах авиамаршрута, добавленных при редактировании вершин.
+                           // добавляем текстовую информацию(firstGeoObject_1.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
+                           geo_points.push(firstGeoObject_text_1);
+                           //console.log('init object', geo_points);
+                           // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
+                           for(var i = 0, l = geo_points.length; i < l; i++) {
+                             // два варианта нахождения последнего символа, в строке описания каждой точки маршрута
+                             // var point_geo_l = geo_points[i].slice(0, -1);
+                             // var point_geo_l = geo_points[i].substring(0, geo_points[i].length - 1);
+
+				             point_geo[i] = '<br />&bull; ' + geo_points[i];
+                             //console.log('init object', point_geo[i]);
+                             //console.log('init object', geo_points);
+			                }
+                            //placemark.properties.set('balloonContentBody', firstGeoObject_text_1);
+                            placemark.properties
+                            .set({
+                              balloonContent: firstGeoObject_text_1
+                            });
+                            if(point_geo.length > 1){
+                             //console.log('init object', point_geo);
+                             $(".route-length2").empty();
+                             $(".route-length2").append('<h3>Все точки автомаршрута: <div style="margin: -28px 0 0 15px; text-align: left; line-height: 1.8"><strong style="font-size: 12px !important;">' + point_geo + '.</strong></div></h3>');
+                            }
+                            });
+
+                           // устанавливаем приближение карты, равное 5.
+                           myMap.setZoom(5);
+                           // добавляем новую метку на карту, с координатами ближайшего аэропорта.
+                           myMap.geoObjects.add(createPlacemark(coord_aero_main, options));
+                           // делаем ее невидимой. Чтобы метка была заменена на значок вершины ломаной авиамаршрута.
+                           placemark.options.set('visible', false);
+                           // добавляем выбранные точки в массив distance_aero
+                           distance_aero.push(placemark);
+                           for(var q = 0, a = distance_aero.length; q < a; q++) {
+                              // получаем их координаты, для дальнейшего использования в построении ломаной авиамаршрута
+			            	  point_aero[q] = distance_aero[q].geometry.getCoordinates();
+			               }
+                           //ЗАВЕРШЕНИЕ МЕХАНИЗМА ОПРЕДЕЛЕНИЯ БЛИЖ. АЭРОПОРТА К ДОБАВЛЕННОЙ ВЕРШИНЕ ЛОМАНОЙ. И ГЕОКОДИРОВАНИЯ ПОЛУЧЕННЫХ ТОЧЕК ВЕРШИН. В РЕЖИМЕ РЕДАКТИРОВАНИЯ ЛОМАНОЙ ПО СОБЫТИЮ 'VERTEXADD'.
+
+
+                           //console.log(model_point_coord);
                            // вычисляем общую длину ломаной, через кол-во ее точек
                            for (var w = 0, d = myGeoObject.geometry.getLength() - 1; w < d; w++) {
                              distance_aero_length_2 += Math.round(coordSystem_2.getDistance(model_point_coord[w], model_point_coord[w + 1]))/1000;
@@ -946,6 +1020,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                           $(".route-length1").append('<h3>Расстояние авиаперелета: <strong>' + distance_aero_main_2 + ' км.</strong></h3><small>Расстояние между выбранными точками, производится через вычисление длины большого круга(то есть это расстояние авиаперелета). Оно равно '+ distance_aero_main_2 +' км.</small>');
                           $(".route-length1").append('<h3>Время авиаперелета: <strong>'+ h +'ч. ' + m +' мин.</strong></h3><small>Скорость самолета принята за 840 км/час. Приняты следующие допущения: учтены добавочные 15 минут на взлет и посадку, в среднем маршрут самолета длиннее расчетного на 10%.</small>');
                           $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main_2 + ' км.</small>');
+                          //$(".route-length2").append('<h3>Все точки автомаршрута: <div style="margin: -28px 0 0 15px; text-align: left; line-height: 1.8"><strong style="font-size: 12px !important;">' + point_geo + '.</strong></div></h3>');
                           //console.log('Расстояние авиаперелета!:' + distance_aero_main_2 + 'км');
                           //console.log('Расстояние авиаперелета - примерно ...км');
                           //console.log(model_point_coord);
@@ -1631,7 +1706,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              // перед построением нового маршрута проверяем, были ли уже проложены старые и удаляем их, если да.
              if(route) myMap.geoObjects.remove(route);
 
-             console.log('init object', type_fuel);
+             //console.log('init object', type_fuel);
 
              // Если не выбран тип топлива, добавляем в блок справа от карты предупреждающий текст.
              if((typeof type_fuel == "undefined"))
@@ -1927,7 +2002,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 		 }
          // обнуляем переменную счетчик меток и массивы.
 		 markers = [];
-         console.log('init object', markers.length);
+         //console.log('init object', markers.length);
 		 point = [];
          geo_points = [];
          point_geo = [];
