@@ -138,11 +138,15 @@ define('map_main', ['jquery', 'als'], function ($, als) {
           // если список аэропортов Мира, координаты:
           myPlacemark_1 = new ymaps.Placemark([colls[4], colls[5]], {
           // Свойства
-          "balloonContent": 'Аэропорт: '+ ballon_aero
+          "balloonContent": 'Аэропорт - '+ ballon_aero
           }, {
           // Опции
           preset: 'twirl#airplaneIcon',
-          visible: false
+          visible: false,
+          // Отключаем кнопку закрытия балуна.
+          //balloonCloseButton: false,
+          // Балун будем открывать и закрывать кликом по иконке метки.
+          //hideIconOnBalloonOpen: false
           });
           //if(markers_1.length === 0 ) {
           myCollection.add(myPlacemark_1);
@@ -327,10 +331,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          placemark.options.set('visible', false);
                          // добавляем выбранные точки в массив distance_aero
                          distance_aero.push(placemark);
+                         // Фильтрация данных массива 'distance_aero' с точками маршрута. Убираем из него undefined и null.
+                         distance_aero = distance_aero.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
                          for(var i = 0, l = distance_aero.length; i < l; i++) {
                             // получаем их координаты, для дальнейшего использования в построении ломаной авиамаршрута
 			            	point_aero[i] = distance_aero[i].geometry.getCoordinates();
 			             }
+                         // Фильтрация данных массива 'point_aero' с гео координатами точек маршрута. Убираем из него undefined и null.
+                         point_aero = point_aero.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
 
                          //myMap.geoObjects.remove(placemark);
 
@@ -338,10 +346,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // Через проверку длины массива 'distance_aero', определяем первую точку и в ней открываем балун. Обрабатываем данные от html-формы из балуна.
                          if(distance_aero.length == 1)
                          {
+                           // Получаем название аэропорта из ближ. объекта closestObject_1, к выбранной точке - closestObject_1.getData().properties.get('balloonContent'). Для вывода его в балуне первой метки авиамаршрута.
+                           //console.log('aeroport', closestObject_1.getData().properties.get('balloonContent'));
                            // Вначале создаем сам балун - placemark.properties.set("balloonContentBody", ...
                            placemark.properties.set("balloonContentBody",
-'<div id="menu">Прежде чем начать строить авиамаршрут, выберите ниже в форме необходимые данные по нему. И после, перетащите следующую метку на карту.<br /><br /> Точки авиамаршрута редактируются, добавляются/удаляются через редактор метки. Редактор открывается кликом по любой из меток авиамаршрута.<br /><br /><small style="color: #1D3B3B;">Укажите кол-во пассажиров:</small><br /> <input type="text" class="input-medium" id="col_text" name="col_text" style="width: 145px !important;" /><br /></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип полета:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Сonversely">Перелет туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Количество радиации в атмосфере:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/qKhPY0P5zQRTChD09SLAfjK__yQ.png" style="height: 20px" /></span><select name="rad_select" id="rad_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="middle">Среднее</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="small">Небольшое</option></select></div><div id="menu">');
+'<div id="menu"><h3 style="font-size: 14px;">Начальная точка авиамаршрута: <i style="color: #999966;">' + closestObject_1.getData().properties.get('balloonContent') + '</i></h3>Прежде чем продолжить строить авиамаршрут, выберите ниже в форме необходимые данные по нему. И после, перетащите следующую метку на карту. Форма и балун будут скрыты, после выбора всех значений.<br /><br /> Точки авиамаршрута редактируются, добавляются/удаляются через редактор метки. Редактор открывается кликом по любой из меток авиамаршрута.<br /><br /><small style="color: #1D3B3B;">Укажите кол-во пассажиров:</small><br /> <input type="text" class="input-medium" id="col_text" name="col_text" style="width: 145px !important;" /><br /></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип полета:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Сonversely">Перелет туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Количество радиации в атмосфере:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/qKhPY0P5zQRTChD09SLAfjK__yQ.png" style="height: 20px" /></span><select name="rad_select" id="rad_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="middle">Среднее</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="small">Небольшое</option></select></div><div id="menu">');
 
+                           // Открываем балун с выбором данных по маршруту, на карте.
                            placemark.balloon.open();
 
                            // Если происходит ввод данных в текстовое поле, создаем обработчик события изменения в текстовом поле.
@@ -396,6 +407,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            {
                              $(".route-length_fuel").append('<h3>Выберите пожалуйста тип радиации.</h3>');
                            }
+
+                           // Если выбрано последнее значение в крайнем списке 'select', по типу радиации, в форме с выбором данных маршрута. Скрываем большой балун первой метки, с формой и вводным текстом, с карты.
+                           // Получаем значение свойства: название аэропорта, для выбранной первой точки и выводим его в балуне. Вместо большого. Саму метку скрываем, чтобы их не было две, при передачи вывода меток редактору ломаной.
+                           myMap.balloon.close();
+                           placemark.properties.set({"balloonContentBody": closestObject_1.getData().properties.get('balloonContent')});
+                           placemark.options.set('visible', false);
+                           placemark.balloon.open();
                            });
 
                          }
@@ -416,6 +434,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            // собираем информацию о точках авиамаршрута, добавленного по картинкам из тулбара.
                            // добавляем текстовую информацию(firstGeoObject_1.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
                            geo_points.push(firstGeoObject_text_1);
+                           // Фильтрация массива 'geo_points' с текстовой информацией о местах маршрута. Убираем из него undefined и null.
+                           geo_points = geo_points.filter(function(x) { return x !== "<br />&bull; undefined" && x !== undefined && x !== null; });
                            //console.log('init object', geo_points);
                            // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
                            for(var i = 0, l = geo_points.length; i < l; i++) {
@@ -427,6 +447,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                              //console.log('init object', point_geo[i]);
                              //console.log('init object', geo_points);
 			               }
+                           // Фильтрация данных массива 'point_geo' с точками о местах маршрута. Убираем из него undefined и null.
+                           point_geo = point_geo.filter(function(x) { return x !== "<br />&bull; undefined" && x !== undefined && x !== null; });
+
                            //placemark.properties.set('balloonContentBody', firstGeoObject_text_1);
                            placemark.properties
                            .set({
@@ -607,10 +630,19 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                               delete model_point1[vertexIndex];
                               // Пересчет длины массива 'model_point1', и смещения его индексов, после удаления выбранной метки маршрута. Чтобы в нем не оставалось пустых значений "undefined".
                               model_point1.slice(0, model_point1.length-1);
-                              // Удаление из массива с гео координатами 'model_point_coord', удаленной с карты точки, с индексом 'vertexIndex'.
+                              // Удаление из массива с гео координатами при редактировании маршрута 'model_point_coord', удаленной с карты точки, с индексом 'vertexIndex'.
                               delete model_point_coord[vertexIndex];
                               // Пересчет длины массива 'model_point_coord', и смещения его индексов, после удаления выбранной метки маршрута. Чтобы в нем не оставалось пустых значений "undefined".
                               model_point_coord.slice(0, model_point_coord.length-1);
+
+                              // Удаление из массива с точками для построения ломаной 'distance_aero', удаленной с карты точки, с индексом 'vertexIndex'.
+                              delete distance_aero[vertexIndex];
+                              // Пересчет длины массива 'distance_aero', и смещения его индексов, после удаления выбранной метки маршрута. Чтобы в нем не оставалось пустых значений "undefined".
+                              distance_aero.slice(0, distance_aero.length-1);
+                              // Удаление из массива с гео координатами для построения ломаной 'point_aero', удаленной с карты точки, с индексом 'vertexIndex'.
+                              delete point_aero[vertexIndex];
+                              // Пересчет длины массива 'point_aero', и смещения его индексов, после удаления выбранной метки маршрута. Чтобы в нем не оставалось пустых значений "undefined".
+                              point_aero.slice(0, point_aero.length-1);
 
                               // Удаление из массивов 'geo_points' и 'point_geo', содержащих информацию о точках маршрута, метки маршрута по ее индексу. Удаленной с карты по кнопке "Удалить", в контекстном меню выршины.
                               // Удаление из массива 'geo_points', удаленной с карты точки, с индексом 'vertexIndex'.
@@ -714,8 +746,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                               $(".route-length1").append('<h3>Время авиаперелета: <strong>'+ h +'ч. ' + m +' мин.</strong></h3><small>Скорость самолета принята за 840 км/час. Приняты следующие допущения: учтены добавочные 15 минут на взлет и посадку, в среднем маршрут самолета длиннее расчетного на 10%.</small>');
                               $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main_1 + ' км.</small>');
 
-                              console.log('init delete', model_point_coord);
-                              console.log('init delete', model_point);
+                              console.log('init add', point_aero);
+                              console.log('init add', distance_aero);
+                              //console.log('init delete', model_point_coord);
+                              //console.log('init delete', model_point);
                             //}
                             //}
                             };
@@ -821,6 +855,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            // собираем информацию о всех вершинах авиамаршрута, добавленных при редактировании вершин.
                            // добавляем текстовую информацию(firstGeoObject_1.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
                            geo_points.push(firstGeoObject_text_1);
+                           // Фильтрация массива 'geo_points' с текстовой информацией о местах маршрута. Убираем из него undefined и null.
+                           geo_points = geo_points.filter(function(x) { return x !== "<br />&bull; undefined" && x !== undefined && x !== null; });
                            // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
                            for(var i = 0, l = geo_points.length; i < l; i++) {
                              // два варианта нахождения последнего символа, в строке описания каждой точки маршрута
@@ -852,10 +888,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            placemark.options.set('visible', false);
                            // добавляем выбранные точки в массив distance_aero
                            distance_aero.push(placemark);
+                           // Фильтрация данных массива 'distance_aero' с точками маршрута. Убираем из него undefined и null.
+                           distance_aero = distance_aero.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
                            for(var q = 0, a = distance_aero.length; q < a; q++) {
                               // получаем их координаты, для дальнейшего использования в построении ломаной авиамаршрута
 			            	  point_aero[q] = distance_aero[q].geometry.getCoordinates();
 			               }
+                           // Фильтрация данных массива 'point_aero' с гео координатами точек маршрута. Убираем из него undefined и null.
+                           point_aero = point_aero.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
                            //ЗАВЕРШЕНИЕ МЕХАНИЗМА ОПРЕДЕЛЕНИЯ БЛИЖ. АЭРОПОРТА К ДОБАВЛЕННОЙ ВЕРШИНЕ ЛОМАНОЙ. И ГЕОКОДИРОВАНИЯ ПОЛУЧЕННЫХ ТОЧЕК ВЕРШИН. В РЕЖИМЕ РЕДАКТИРОВАНИЯ ЛОМАНОЙ ПО СОБЫТИЮ 'VERTEXADD'.
 
 
@@ -946,8 +986,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                           //console.log('Расстояние авиаперелета!:' + distance_aero_main_2 + 'км');
                           //console.log('Расстояние авиаперелета - примерно ...км');
                           //console.log(model_point_coord);
-                          console.log('init add', model_point_coord);
-                          console.log('init add', model_point1);
+                          //console.log('init add', model_point_coord);
+                          console.log('init add', point_aero);
                          });
 
                          // Добавляем линию авиамаршрута на карту.
