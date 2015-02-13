@@ -68,8 +68,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
   Map.prototype.createMap = function () {
 
-    var route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_fuel, type_travel, aero_num_people, type_aero, type_rad,
-    num, rad, type_route, way_m, way_m_upd, visibleObjects, mGeocoder, geoObjects_coll, firstGeoObject_1, ballon_aero, result, ch = 1, distance_aero_length;
+    var route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_fuel, type_travel, aero_num_people, type_aero, type_rad, firstGeoObject_text, firstGeoObject_text_route_first,
+    num, rad, type_route, way_m, way_m_upd, visibleObjects, mGeocoder, geoObjects_coll, firstGeoObject_1, ballon_aero, result, ch = 1, text, firstGeoObject_text_route, distance_aero_length;
     var markers = [];
     var markers_1 = [];
 	var point = [];
@@ -228,7 +228,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         this.constructor.superclass.clear.apply(this, arguments);
                     }
                     }),
-                    placemark = new ymaps.Placemark(coordinates);
+                    placemark = new ymaps.Placemark(coordinates, {id: ch});
+                    // {id: ch}, добавляем в свойства метки, id для каждой новой точки автомаршрута. Чтобы по нему производить удаление первой метки, в ее балуне.
 
                     placemark.options.set(options);
                     // Геокодируем координаты метки.
@@ -285,6 +286,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // Если строится автомаршрут, по клику или из тулбара, то добавляем его точки в массив markers
                          if (placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
                            markers.push(placemark);
+                           // Увеличиваем значение 'id' новой точки автомаршрута. Перетянутой из тулбара.
+                           ch++;
+                           // Добавляем опции, если открыт балун метку не скрываем и устанавливаем ей минимальный приоритет. Чтобы балун был поверх нее.
+                           placemark.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
                          }
 
                          // НАЧИНАЕМ СТРОИТЬ АВИАМАРШРУТ
@@ -1200,6 +1205,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          route = router;
                          route.options.set({ strokeStyle: 'solid'});
 
+                         /*
                          // длина маршрута в м
                          var way_m = route.getLength();
                          // округленная длина маршрута, без цифр, после запятой
@@ -1210,8 +1216,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                          var way_m_home = (way_m_1 * 2 * 14)/1000; // получения значения пробега за год. Если маршрут используется для поездок на дачу, в км.
                          var way_m_home_1 = way_m_home.toFixed(0); // округление пробега, до 0 цифр после запяфтой.
+                         */
 
-                         //Сортировка маршрутов по выбранным картинкам(самолет, машинка, дом)
+                         //Сортировка маршрутов по выбранным картинкам(самолет, машинка)
 
                          // НАЧИНАЕМ ПРОКЛАДЫВАТЬ АВТОМАРШРУТ ПО ПЕРЕНЕСЕННЫМ МЕТКАМ ИЗ ТУЛБАРА
                          //если выбраны картинки: машинки или домика
@@ -1229,7 +1236,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                          // С помощью метода getWayPoints() получаем массив точек маршрута
                          var points = route.getWayPoints();
-                         // Делаем метки маршрута невидимыми. Если сделать видимыми, то тогда необходимо сделать placemark's, добавленные ранее невидимыми - placemark.options.set('visible', true);. Выше в коде, где добавляется новая метка.
+                         // Делаем полученные точки маршрута видимыми.
                          points.options.set('visible', true);
                          points.options.set({
                          //'preset', 'twirl#carIcon'
@@ -1343,6 +1350,91 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                  //'preset': 'twirl#carIcon'
                  });
                  //wayPoints.properties.set('balloonContentBodyLayout', myBalloonContentBodyLayout);
+
+                 // Находим крайнюю, добавленную точку к маршруту.
+                 var lastPoint = wayPoints.get(wayPoints.getLength() - 1);
+                 // Определяем ее координаты.
+                 var lastPoint_coord = lastPoint.geometry.getCoordinates();
+                 //console.log('Координаты новой точки: ', lastPoint_coord);
+
+                 // Находим первую точку маршрута
+                 var lastPoint_first =  route.getWayPoints().get(1);
+                 // Определяем ее координаты.
+                 var lastPoint_coord_first = lastPoint_first.geometry.getCoordinates();
+                 console.log('Координаты новой точки: ', lastPoint_coord_first);
+
+                 // Производим геокодирование первой путевой точки
+                 ymaps.geocode(lastPoint_coord_first).then(function (res) {
+                    var firstGeoObject_route = res.geoObjects.get(0);
+                    firstGeoObject_text_route_first = firstGeoObject_route.properties.get('text');
+                 });
+                 console.log('Местонахождение новой точки: ', firstGeoObject_text_route_first);
+
+                 // Производим геокодирование последующих путевых точек
+                 ymaps.geocode(lastPoint_coord).then(function (res) {
+                    var firstGeoObject_route = res.geoObjects.get(0);
+                    firstGeoObject_text_route = firstGeoObject_route.properties.get('text');
+                 });
+
+                 //Если геокодировали путевые точки маршрута, выводим их в балуне меток. Если нет, выводим геокодированую пред. точку.
+                 var text_route;
+                 if((typeof firstGeoObject_text_route != "undefined")) {
+                    text_route = firstGeoObject_text_route;
+                 }
+                 else {
+                    text_route = firstGeoObject_text;
+                 }
+
+
+                 // Закрываем открытый балун, второй метки маршрута
+                 myMap.balloon.close();
+
+                 var link_route = '<a href="#" class="btn btn-warning" id="switch_1">Удалить маршрут</a>';
+
+                 // Добавляем новый балун на карту, по координатам новой точки. С данными о точке и ссылкой "Удалить маршрут".
+                 myMap.balloon.open(lastPoint_coord, {
+                 content: text_route + '<br />' + link_route
+                 }, {
+                 closeButton: true
+                 });
+
+                 // Создаем механизм удаления всего маршрута, по ссылке "Удалить маршрут".
+                 //Получаем идентификатор 'switch', ссылки "Удалить маршрут".
+                 var p = document.getElementById('switch_1');
+                 //Вешаем на него событие onclick. По нему удаляем весь маршрут с карты.
+                 p.onclick = function() {
+                 // Удаляем маршрут и метки.
+                 route && myMap.geoObjects.remove(route);
+                 for(var i = 0, l = markers.length; i < l; i++) {
+		           myMap.geoObjects.remove(markers[i]);
+		         }
+
+                 // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
+                 markers = [];
+        	     point = [];
+                 // Счетчик id меток, выставляем равным 1.
+                 ch = 1;
+
+                 // очищаем данные о типе топлива, типе поездки и типе маршрута.
+                 $(".route-length_fuel").empty();
+                 $(".route-length_travel").empty();
+                 $(".route-length_route").empty();
+
+                 // Устанавливаем после удаления маршрута, новый центр и zoom карты.
+                 myMap.setCenter([55.752078, 37.621147], 8);
+
+                 // Очищаем все данные маршрута, в блоке справа от карты
+                 $(".route-length1").empty();
+                 // Убираем открытый балун с карты
+                 myMap.balloon.close();
+                 };
+                 // Завершаем удаление всего маршрута, по ссылке "Удалить маршрут".
+
+                 // Если массив 'markers' не пустой, после события обновления маршрута, добавляем к выбранной точке ссылку "Удалить метку". После редактирования маршрута.
+                 if(markers.length !== 0)
+                 {
+                    placemark.properties.set({'balloonContentBody': text + '<br /><a href="#" class="btn btn-warning" id="switch">Удалить метку</a>'});
+                 }
 
                  // длина обновленнного маршрута в м
                  way_m = route.getLength();
@@ -1480,7 +1572,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                 function geocodePlacemark(placemark) {
                     ymaps.geocode(placemark.geometry.getCoordinates(), { results: 1 })
                         .then(function (res) {
-                            var first = res.geoObjects.get(0),
+                            var first = res.geoObjects.get(0);
                                 text = first.properties.get('text');
 
                                 // если выбран не авиамаршрут, собираем информацию о всех точках автомаршрута, добавленного по картинкам из тулбара.
@@ -1496,16 +1588,20 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                             // Выставляем содержимое балуна метки.
                             //placemark.properties.set('balloonContentBody', text);
 
-                            // если выбран значок не 'самолетик', в балуне первой метки, отмеченной на карте, выводим html-форму, с тремя списками select, с данными маршрута(типп: топлива, поездки, маршрута).
+                            // Добавляем балун к меткам после редактирования автомаршрута, с возможностью удалить их.
                             if(placemark.options.get('iconImageHref') != '/f/min/images/airplane.png') {
-                            placemark.properties.set("balloonContentBody",
-'<div id="menu">Прежде чем начать строить автомаршрут, выберите ниже в форме необходимые данные по нему. И после, перетащите или добавьте следующую метку на карту.<br /><br /> Точки маршрута удаляются двойным кликом по ним. После можно добавить новые точки к маршруту.<br /><br /><small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
+                              placemark.properties.set({'balloonContentBody': text + '<br /><a href="#" class="btn btn-warning" id="switch">Удалить метку</a>'});
                             }
                             //console.log('init object', markers.length);
                             // Если выбран значок не 'самолетик', а 'машинка', обрабатываем данные из формы балуна первой точки, по автомаршрутизации.
                             if(placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
+
                             if(markers.length == 1)
                             {
+                              //Если метка первая, выводим html-форму, с тремя списками select, с данными маршрута(тип: топлива, поездки, маршрута.
+                              placemark.properties.set("balloonContentBody",
+'<div id="menu"><p style="font-size: 14px;"><b>Начальная точка маршрута: <i style="color: #999966;">' + text + '</i></b></p><br />Прежде чем продолжить строить автомаршрут, выберите ниже в форме необходимые данные по нему. И после, перетащите или добавьте следующую метку на карту.<br /><br /> Точки маршрута удаляются двойным кликом по ним. После можно добавить новые точки к маршруту.<br /><br /><small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
+
                               // Если отмечена первая метка, открываем балун с выбором данных по маршруту.
                               placemark.balloon.open();
 
@@ -1570,28 +1666,113 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                               {
                                 $(".route-length_fuel").append('<h3>Выберите пожалуйста тип топлива.</h3>');
                               }
+
+                              // Если выбрано последнее значение в крайнем списке 'select', по типу топлива, в форме с выбором данных маршрута. Скрываем большой балун первой метки, с формой и вводным текстом, с карты.
+                              // Получаем значение свойства: название места, для выбранной первой точки и выводим его в балуне, вместе с кнопкой удаления метки.
+                              myMap.balloon.close();
+                              // Указываем в качестве контекста балуна макет 'myBalloonContentBodyLayout', первой метке маршрута.
+                              placemark.options.set({balloonContentBodyLayout: myBalloonContentBodyLayout});
+                              placemark.properties.set({'balloonContentBody': text + '<br /><a href="#" class="btn btn-warning" id="switch_2">Удалить метку!</a>'});
+                              placemark.balloon.open();
+
+                              // Создаем механизм удаления первой метки с карты, по ссылке "Удалить метку".
+                              // получаем координаты добавленной метки
+                              var myPlacemark_coord = placemark.geometry.getCoordinates();
+
+                              //console.log('длина массива markers равна :', markers.length);
+                              //console.log('координаты точки :', myPlacemark_coord);
+                              // Получаем значение 'id', удаляемой точки, по ссылке "удалить метку!".
+                              var id = placemark.properties.get('id');
+                              console.log('id точки :', id);
+
+                              //Получаем идентификатор 'switch', ссылки "Удалить метку".
+                              var c = document.getElementById('switch_2');
+                              //Вешаем на него событие onclick. По нему удаляем первую точку с карты и из массива 'markers'.
+                              c.onclick = function() {
+                               //alert('Пример 1 сработал');
+                               delete markers[id - id];
+                               // Пересчет длины массива 'markers', и смещение его индексов, после удаления метки с карты.
+                               markers.slice(0, markers.length-1);
+                               // Фильтрация данных массива 'markers'. Убираем из него undefined и null.
+                               markers = markers.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
+                               console.log('длина массива markers равна :', markers.length);
+
+                               // После удаления точки, убираем данные в блоке справа от карты. По типам: поездки, маршрута, топлива.
+                               $(".route-length_fuel").empty();
+                               $(".route-length_travel").empty();
+                               $(".route-length_route").empty();
+                               // Обнуляем соотвествующие переменные
+                               type_fuel = "undefined";
+                               type_travel = "undefined";
+                               type_route = "undefined";
+
+                               // Если перетянутая метка 'машинки' первая, принудительно скрываем ее балун и саму метку.
+                               myMap.balloon.close();
+                               placemark.options.set('visible', false);
+
+                              };
+
                               });
 
                               }
                               else
                               {
-                              // Если выбранная метка не первая на карте и открыт ее балун. Добавляем в него информацию об адресе метки и кнопку "Удалить метку".
-                              if(myMap.balloon.open){
-                                 placemark.properties.set('balloonContentBody', text + '<br /><button type="submit" class="btn btn-warning" name="del_place" style="text-align: center; margin-top: 10px;">Удалить метку</button>');
-                                 //var markers_new_lenght = [];
-                                 //markers_new_lenght = [markers.length - 1];
-                                 // Если нажата кнопка "Удалить массив", уменьшаем массив markers на одно значение.
-                                 $('button[name=del_place]').click(function () {
-                                    // Уменьшаем массив markers на одно значение.
-                                    markers.slice(0, markers.pop());
-                                    //console.log('init object', markers.length);
-                                 });
-                              }
+                              var link_route = '<a href="#" class="btn btn-warning" id="switch_1">Удалить маршрут</a>';
+                              // Закрываем балун первой метки
+                              myMap.balloon.close();
 
-                              // Если отмечена вторая метка на карте или произведен выбор по всем трем спискам данных по маршруту, скрываем балун с выбором данных.
-                              if(markers.length != 1 || (typeof type_fuel != "undefined") && (typeof type_travel != "undefined") && (typeof type_route != "undefined")){
-                                 myMap.balloon.close();
-                              }
+                              // получаем координаты добавленной метки
+                              var myPlacemark_coord = placemark.geometry.getCoordinates();
+
+                              // Добавляем балун на карту, по координатам метки. С данными о точке и ссылкой "Удалить маршрут".
+                              myMap.balloon.open(myPlacemark_coord, {
+                              content: text + '<br />' + link_route
+                              }, {
+                              closeButton: true
+                              });
+
+
+                              // Если балун точки, после закрытия, был снова открыт. Добавляем в него информацию с данными о точке и ссылкой "Удалить маршрут". Открываем балун.
+                              if (placemark.balloon.isOpen()) {
+                                myMap.balloon.open(myPlacemark_coord, {
+                                  content: firstGeoObject_text + '<br />' + link_route
+                                  }, {
+                                  closeButton: true
+                                });
+                                console.log('Балун точки :', placemark.balloon.open());
+                               }
+
+                              // Создаем механизм удаления всего маршрута, по ссылке "Удалить маршрут".
+                              //Получаем идентификатор 'switch', ссылки "Удалить маршрут".
+                              var b = document.getElementById('switch_1');
+                              //Вешаем на него событие onclick. По нему удаляем весь маршрут с карты.
+                              b.onclick = function() {
+                              // Удаляем маршрут и метки.
+                              route && myMap.geoObjects.remove(route);
+                              for(var i = 0, l = markers.length; i < l; i++) {
+		                       myMap.geoObjects.remove(markers[i]);
+		                      }
+
+                              // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
+                              markers = [];
+        	                  point = [];
+                              // Счетчик id меток, выставляем равным 1.
+                              ch = 1;
+
+                              // очищаем данные о типе топлива, типе поездки и типе маршрута.
+                              $(".route-length_fuel").empty();
+                              $(".route-length_travel").empty();
+                              $(".route-length_route").empty();
+
+                              // Устанавливаем после удаления маршрута, новый центр и zoom карты.
+                              myMap.setCenter([55.752078, 37.621147], 8);
+
+                              // Очищаем все данные маршрута, в блоке справа от карты
+                              $(".route-length1").empty();
+                              // Убираем открытый балун с карты
+                              myMap.balloon.close();
+                              };
+
                               }
                               }
 
@@ -1678,7 +1859,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                     // Свойства
                     // Текст метки
                     //balloonContentBody: '<a href="#" class="btn btn-warning">удалить метку</a>',
-                    iconContent: ch
+                    // Добавляем к каждой новой точке свой id.
+                    id: ch
                 }, {
                     // Опции
                     // Иконка метки будет растягиваться под ее контент
@@ -1690,6 +1872,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                     'iconImageOffset': [-(35 / 2), -34],
                     // Метку можно перемещать.
                     draggable: true,
+                    // Метка остается на карте, при открытом над ней балуне.
+                    hideIconOnBalloonOpen: false,
+                    // Устанавливаем ее приоритет равным 0, чтобы она оставалась на карте, под открытым балуном.
+                    zIndexActive: 0,
                     balloonContentBodyLayout: myBalloonContentBodyLayout
                 });
 
@@ -1705,7 +1891,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              // Отправим запрос на геокодирование добавленной метки. Геокодирование координат полученной метки, в полный адрес. Его вывод в балуне метки.
              ymaps.geocode(position).then(function (res) {
              var firstGeoObject = res.geoObjects.get(0);
-             var firstGeoObject_text = firstGeoObject.properties.get('text');
+             firstGeoObject_text = firstGeoObject.properties.get('text');
              // собираем информацию о всех точках автомаршрута, добавленного несколькими кликами по карте.
              // добавляем текстовую информацию(firstGeoObject_text.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
              geo_points.push(firstGeoObject_text);
@@ -1715,13 +1901,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              //console.log('init object', point_geo);
 			 }
              //myPlacemark.properties.set('balloonContentBody', firstGeoObject_text + '<br /><a href="#" class="btn btn-warning">удалить метку</a>');
-             // в балуне первой метки, отмеченной на карте, выводим html-форму, с тремя списками select, с данными маршрута(типп: топлива, поездки, маршрута).
-             myPlacemark.properties.set("balloonContentBody",
-'<div id="menu">Прежде чем начать строить автомаршрут, выберите ниже в форме необходимые данные по нему. И после, установите следующую точку на карте.<br /><br /> Точки маршрута удаляются двойным кликом по ним. После можно добавить новые точки к маршруту.<br /><br /><small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
-
              //console.log('init object', markers.length);
              if(markers.length == 1)
              {
+             // в балуне первой метки, отмеченной на карте, выводим html-форму, с тремя списками select, с данными маршрута(типп: топлива, поездки, маршрута).
+             myPlacemark.properties.set("balloonContentBody",
+'<div id="menu"><p style="font-size: 14px;"><b>Начальная точка маршрута: <i style="color: #999966;">' + firstGeoObject_text + '</i></b></p><br />Прежде чем продолжить строить автомаршрут, выберите ниже в форме необходимые данные по нему. И после, установите следующую точку на карте.<br /><br /> Точки маршрута удаляются двойным кликом по ним. После можно добавить новые точки к маршруту.<br /><br /><small style="color: #1D3B3B;">Выберите тип поездки по указанному маршруту:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" style="height: 20px" /></span><select name="travel_select" id="travel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Work">В рабочие дни, до работы</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/g27LNtBATnbpbUsxVjoEkRgLDdQ.png" value="Dacha">В выходные дни, до дачи</option></select></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип маршрута:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Сonversely">Туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/5GcLGXMVoNYUF6dEyopffU2WsMw.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Выберите тип топлива вашего автомобиля:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" style="height: 20px" /></span><select name="fuel_select" id="fuel_select" class="span2" style="width: 211px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Gazoline">Бензин</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="Diesel">Дизель</option></select></div><div id="menu">');
+
               // Если отмечена первая метка, открываем балун с выбором данных по маршруту.
               myPlacemark.balloon.open();
 
@@ -1786,11 +1972,134 @@ define('map_main', ['jquery', 'als'], function ($, als) {
               {
                 $(".route-length_fuel").append('<h3>Выберите пожалуйста тип топлива.</h3>');
               }
+
+              // Если выбрано последнее значение в крайнем списке 'select', по типу топлива, в форме с выбором данных маршрута. Скрываем большой балун первой метки, с формой и вводным текстом, с карты.
+              // Получаем значение свойства: название места, для выбранной первой точки и выводим его в балуне, вместе с кнопкой удаления метки.
+              myMap.balloon.close();
+              myPlacemark.properties.set({'balloonContentBody': firstGeoObject_text + '<br /><a href="#" class="btn btn-warning" id="switch">Удалить метку</a>'});
+              myPlacemark.balloon.open();
+
+              // Создаем механизм удаления первой метки с карты, по ссылке "Удалить метку".
+              // получаем координаты добавленной метки
+              var myPlacemark_coord = myPlacemark.geometry.getCoordinates();
+
+              //console.log('длина массива markers равна :', markers.length);
+              //console.log('координаты точки :', myPlacemark_coord);
+              // Получаем значение 'id', удаляемой точки, по ссылке "удалить метку!".
+              var id = myPlacemark.properties.get('id');
+              console.log('id точки :', id);
+
+              //Получаем идентификатор 'switch', ссылки "Удалить метку".
+              var a = document.getElementById('switch');
+              //Вешаем на него событие onclick. По нему удаляем первую точку с карты и из массива 'markers'.
+              a.onclick = function() {
+                //alert('Пример 1 сработал');
+                delete markers[id - id];
+                // Пересчет длины массива 'markers', и смещение его индексов, после удаления метки с карты.
+                markers.slice(0, markers.length-1);
+                // Фильтрация данных массива 'markers'. Убираем из него undefined и null.
+                markers = markers.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
+                //console.log('длина массива markers равна :', markers.length);
+
+                // После удаления точки, убираем данные в блоке справа от карты. По типам: поездки, маршрута, топлива.
+                $(".route-length_fuel").empty();
+                $(".route-length_travel").empty();
+                $(".route-length_route").empty();
+                // Обнуляем соотвествующие переменные
+                type_fuel = "undefined";
+                type_travel = "undefined";
+                type_route = "undefined";
+
+              };
+
+              /*
+              // получаем значение открытого балуна на карте
+              var balloon = myMap.balloon.open;
+              // Проверяем что он установился и открыт
+              if (balloon && balloon.isOpen()) {
+                 myPlacemark.options.set('visible', true);
+              }
+              */
               });
 
              }
              else
              {
+               var link_route = '<a href="#" class="btn btn-warning" id="switch_1">Удалить маршрут</a>';
+               // Закрываем балун первой метки
+               myMap.balloon.close();
+
+               // получаем координаты добавленной метки
+               var myPlacemark_coord = myPlacemark.geometry.getCoordinates();
+
+               // Добавляем балун на карту, по координатам метки. С данными о точке и ссылкой "Удалить маршрут".
+               myMap.balloon.open(myPlacemark_coord, {
+               content: firstGeoObject_text + '<br />' + link_route
+               }, {
+               closeButton: true
+               });
+
+
+               // Если балун точки, после закрытия, был снова открыт. Добавляем в него информацию с данными о точке и ссылкой "Удалить маршрут".
+               if (myPlacemark.balloon.isOpen()) {
+                 myMap.balloon.open(myPlacemark_coord, {
+                 content: firstGeoObject_text + '<br />' + link_route
+                 }, {
+                 closeButton: true
+                 });
+                 console.log('Балун точки :', myPlacemark.balloon.open());
+                }
+
+               // Создаем механизм удаления всего маршрута, по ссылке "Удалить маршрут".
+               //Получаем идентификатор 'switch', ссылки "Удалить маршрут".
+               var b = document.getElementById('switch_1');
+               //Вешаем на него событие onclick. По нему удаляем весь маршрут с карты.
+               b.onclick = function() {
+               // Удаляем маршрут и метки.
+               route && myMap.geoObjects.remove(route);
+               for(var i = 0, l = markers.length; i < l; i++) {
+		         myMap.geoObjects.remove(markers[i]);
+		       }
+
+               // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
+               markers = [];
+        	   point = [];
+               // Счетчик id меток, выставляем равным 1.
+               ch = 1;
+
+               // очищаем данные о типе топлива, типе поездки и типе маршрута.
+               $(".route-length_fuel").empty();
+               $(".route-length_travel").empty();
+               $(".route-length_route").empty();
+
+               // Устанавливаем после удаления маршрута, новый центр и zoom карты.
+               myMap.setCenter([55.752078, 37.621147], 8);
+
+               // Очищаем все данные маршрута, в блоке справа от карты
+               $(".route-length1").empty();
+               // Убираем открытый балун с карты
+               myMap.balloon.close();
+
+               // Попытки удаления выбранной, отдельной точки маршрута.
+               /*
+
+               // Получаем значени 'id', удаляемой точки, по ссылке "удалить метку!".
+               var id = myPlacemark.properties.get('id');
+
+               delete markers[id - id];
+               // Пересчет длины массива 'markers', и смещение его индексов, после удаления метки с карты.
+               markers.slice(0, markers.length-1);
+               // Фильтрация данных массива 'markers'. Убираем из него undefined и null.
+               markers = markers.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
+               console.log('длина массива markers равна :', markers.length);
+
+               delete point[id - id];
+               point.slice(0, point.length-1);
+               point = point.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
+               */
+
+              };
+              /*
               // Если выбранная метка не первая на карте и открыт ее балун. Добавляем в него информацию об адресе метки и кнопку "Удалить метку".
               if(myMap.balloon.open){
                  myPlacemark.properties.set('balloonContentBody', firstGeoObject_text + '<br /><a href="#" class="btn btn-warning">удалить метку</a>');
@@ -1800,6 +2109,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
               if(markers.length != 1 || (typeof type_fuel != "undefined") && (typeof type_travel != "undefined") && (typeof type_route != "undefined")){
                  myMap.balloon.close();
               }
+              */
              }
              });
 
@@ -1809,6 +2119,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
              // перед построением нового маршрута проверяем, были ли уже проложены старые и удаляем их, если да.
              if(route) myMap.geoObjects.remove(route);
+             $(".route-length1").empty();
 
              //console.log('init object', type_fuel);
 
@@ -1855,6 +2166,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                 'iconImageSize': [35, 34],
                 'iconImageOffset': [-(35 / 2), -34]
                 });
+
+
+                // Скрываем балун второй метки маршрута, перед включением редактирования меток маршрута.
+                //myMap.balloon.close();
+                //myPlacemark.properties.set({'balloonContentBody': firstGeoObject_text + '<br /><a href="#" class="btn btn-warning" id="switch">Удалить метку</a>'});
+                //myPlacemark.balloon.open();
+
                 //points.properties.set('balloonContentBodyLayout', myBalloonContentBodyLayout);
 
                 // ПОЛУЧАЕМ ПЕРВОНАЧАЛЬНЫЕ ДАННЫЕ ПО НОВОМУ МАРШРУТУ. ОБРАБАТЫВАЕМ И ВЫВОДИМ ИХ.
@@ -1945,8 +2263,16 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                 //$(".route-length2").append('<h3>Все точки автомаршрута: <div style="margin: -20px 0 0 15px;"><strong>' + point_geo + '.</strong></div></h3>');
                 // ЗАВЕРШЕНИЕ ОБРАБОТКИ И ВЫВОДА ДАННЫХ ПО НОВОМУ МАРШРУТУ:
 
+                /*
+                route.events.add("update",function (e) {
+                    var point_add = e.get('wayPoint');
+                    console.log('Новая точка маршрута: ', point_add);
+                });
+                */
+
                 // ОТСЛЕЖИВАЕМ СОБЫТИЕ ОБНОВЛЕНИЯ МАРШРУТА. ПРИ ДОБАВЛЕНИИ НОВЫХ ПУТЕВЫХ ТОЧЕК. ПРИ ВКЛЮЧЕННОМ РЕДАКТОРЕ МАРШРУТА.
                 route.events.add("update",function () {
+
                  // очищаем блок с данными построенного маршрута, до события обновления маршрута. Т.к. здесь будут добавляться свои данные, в зависимости от события маршрута.
                  $(".route-length1").empty();
                  // очищаем блок с данными о всех точках маршрута.
@@ -1965,6 +2291,90 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                  //'preset': 'twirl#carIcon'
                  });
                  //wayPoints.properties.set('balloonContentBodyLayout', myBalloonContentBodyLayout);
+
+                 // Находим крайнюю, добавленную точку к маршруту.
+                 var lastPoint = wayPoints.get(wayPoints.getLength() - 1);
+                 // Определяем ее координаты.
+                 var lastPoint_coord = lastPoint.geometry.getCoordinates();
+
+                 // Находим первую точку маршрута
+                 var lastPoint_first =  route.getWayPoints().get(1);
+                 // Определяем ее координаты.
+                 var lastPoint_coord_first = lastPoint_first.geometry.getCoordinates();
+                 console.log('Координаты новой точки: ', lastPoint_coord_first);
+
+                 // Производим геокодирование первой путевой точки
+                 ymaps.geocode(lastPoint_coord_first).then(function (res) {
+                    var firstGeoObject_route = res.geoObjects.get(0);
+                    firstGeoObject_text_route_first = firstGeoObject_route.properties.get('text');
+                 });
+                 console.log('Местонахождение новой точки: ', firstGeoObject_text_route_first);
+
+                 // // Производим геокодирование последующих путевых точек
+                 ymaps.geocode(lastPoint_coord).then(function (res) {
+                    var firstGeoObject_route = res.geoObjects.get(0);
+                    firstGeoObject_text_route = firstGeoObject_route.properties.get('text');
+                 });
+
+                 //Если геокодировали путевые точки маршрута, выводим их в балуне меток. Если нет, выводим геокодированую пред. точку.
+                 var text_route;
+                 if((typeof firstGeoObject_text_route != "undefined")) {
+                    text_route = firstGeoObject_text_route;
+                 }
+                 else {
+                    text_route = firstGeoObject_text;
+                 }
+
+                 // Закрываем открытый балун, второй метки маршрута
+                 myMap.balloon.close();
+
+                 var link_route = '<a href="#" class="btn btn-warning" id="switch_1">Удалить маршрут</a>';
+
+                 // Добавляем новый балун на карту, по координатам новой точки. С данными о точке и ссылкой "Удалить маршрут".
+                 myMap.balloon.open(lastPoint_coord, {
+                 content: text_route + '<br />' + link_route
+                 }, {
+                 closeButton: true
+                 });
+
+                 // Создаем механизм удаления всего маршрута, по ссылке "Удалить маршрут".
+                 //Получаем идентификатор 'switch', ссылки "Удалить маршрут".
+                 var d = document.getElementById('switch_1');
+                 //Вешаем на него событие onclick. По нему удаляем весь маршрут с карты.
+                 d.onclick = function() {
+                 // Удаляем маршрут и метки.
+                 route && myMap.geoObjects.remove(route);
+                 for(var i = 0, l = markers.length; i < l; i++) {
+		           myMap.geoObjects.remove(markers[i]);
+		         }
+
+                 // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
+                 markers = [];
+        	     point = [];
+                 // Счетчик id меток, выставляем равным 1.
+                 ch = 1;
+
+                 // очищаем данные о типе топлива, типе поездки и типе маршрута.
+                 $(".route-length_fuel").empty();
+                 $(".route-length_travel").empty();
+                 $(".route-length_route").empty();
+
+                 // Устанавливаем после удаления маршрута, новый центр и zoom карты.
+                 myMap.setCenter([55.752078, 37.621147], 8);
+
+                 // Очищаем все данные маршрута, в блоке справа от карты
+                 $(".route-length1").empty();
+                 // Убираем открытый балун с карты
+                 myMap.balloon.close();
+                 };
+                 // Завершаем удаление всего маршрута, по ссылке "Удалить маршрут".
+
+                 // Если выбрана вторая точка маршрута, после события обновления маршрута, добавляем к ней ссылку "Удалить метку".
+                 if(markers.length == 2)
+                 {
+                    myPlacemark.properties.set({'balloonContentBody': firstGeoObject_text + '<br /><a href="#" class="btn btn-warning" id="switch">Удалить метку</a>'});
+                 }
+
 
                  // длина обновленнного маршрута в м
                  way_m = route.getLength();
@@ -2092,6 +2502,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
       //Удаление маршрута, геокодированной коллекции координат и добавленных меток, с карты и очистка данных.
         button1.click(function () {
+        // Если на карте остался неудаленный балун от автомаршрута, убираем его.
+        myMap.balloon.close();
         // Выключаем редактор маршрута.
         //route.editor.stop();
 
