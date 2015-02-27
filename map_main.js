@@ -68,8 +68,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
   Map.prototype.createMap = function () {
 
-    var route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_fuel, type_travel, aero_num_people, type_aero, type_rad, firstGeoObject_text, firstGeoObject_text_route_first,
-    num, rad, type_route, way_m, visibleObjects, geoObjects_coll, firstGeoObject_1, ballon_aero, text, firstGeoObject_text_route, distance_aero_length, car, ch = 1;
+    var i, ii, route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_route, type_fuel, type_travel, type_aero, type_rad, firstGeoObject_text,
+    firstGeoObject_text_route_first, firstGeoObject_text_route, num, rad, aero_num_people, way_m, visibleObjects, firstGeoObject_1, ballon_aero, text, distance_aero_length, car,
+       ch = 1, el = this.root.get(0);
     var markers = [];
 	var point = [];
     var geo_points = [];
@@ -79,7 +80,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     var way_m_paths = [];
     var model_point = [];
     var model_point_coord = [];
-    var placemarks = [];
     var markers_route = [];
     var myCollection;
     // делаем переменную myCollection, глобальной, чтобы можно было ее значение передавать из ajaх запроса. При получении списка аэропортов из aero1.csv.
@@ -87,8 +87,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     // создаем глобальную переменную для GeoQueryResult, со списком аэропортов.
     var arPlacemarksRez;
     window.globalvar = arPlacemarksRez;
-    var i, ii,
-      el = this.root.get(0);
 
     this.yMap = new ymaps.Map(
       'map_main',
@@ -146,9 +144,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
           // Балун будем открывать и закрывать кликом по иконке метки.
           //hideIconOnBalloonOpen: false
           });
-          //if(markers_1.length === 0 ) {
           myCollection.add(myPlacemark_1);
-          //}
         }
         }
 	 });
@@ -200,7 +196,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                    myBalloonContentBodyLayout = ymaps.templateLayoutFactory.createClass('$[properties.balloonContentBody]', {
                     build: function () {
                         this.constructor.superclass.build.apply(this, arguments);
-
                         // Получаем ссылку на геообъект из данных
                         this._geoObject = this.getData().geoObject;
                         // Находим нужный элемент в контексте родителя балуна
@@ -227,7 +222,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                     }
                     }),
                     placemark = new ymaps.Placemark(coordinates, {id: ch});
-                    // {id: ch}, добавляем в свойства метки, id для каждой новой точки автомаршрута. Чтобы по нему производить удаление первой метки, в ее балуне.
 
                     placemark.options.set(options);
                     // Геокодируем координаты метки.
@@ -281,10 +275,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // делаем ее видимой, передаем далее в скрипте, вывод меток маршрута, механизму маршрутизатизации route().
                          placemark.options.set('visible', true);
 
-                         // Если строится автомаршрут, по клику или из тулбара, то добавляем его точки в массив markers
+                         // Если строится автомаршрут, перетягиванием метки из тулбара, то добавляем его точки в массив markers.
                          if (placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
                            markers.push(placemark);
-                           // Увеличиваем значение 'id' новой точки автомаршрута. Перетянутой из тулбара.
+                           // Увеличиваем значение счетчика 'ch', при добавлении каждой новой точки автомаршрута. Перетянутой из тулбара.
                            ch++;
                            // Добавляем опции, если открыт балун метку не скрываем и устанавливаем ей минимальный приоритет. Чтобы балун был поверх нее.
                            placemark.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
@@ -310,7 +304,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // помещаем оба значения в массив coord_aero_main, для использования его в геокодировании найденной точки аэропорта.
                          var coord_aero_main = [coord_aero_lat, coord_aero_lon];
 
-                         // удаляем основную метку, добавленную выше myMap.geoObjects.add(createPlacemark(coordinates, options));. Чтобы заменить ее новой по координатам найденного аэропорта.
+                         // Удаляем основную метку, созданную и добавленную выше myMap.geoObjects.add(createPlacemark(coordinates, options));. Чтобы заменить ее новой по координатам найденного аэропорта.
                          myMap.geoObjects.remove(placemark);
 
                          // устанавливаем приближение карты, равное 5.
@@ -420,7 +414,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            geo_points.push(firstGeoObject_text_1);
                            // Фильтрация массива 'geo_points' с текстовой информацией о местах маршрута. Убираем из него undefined и null.
                            geo_points = geo_points.filter(function(x) { return x !== "<br />&bull; undefined" && x !== undefined && x !== null; });
-                           //console.log('init object', geo_points);
                            // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
                            for(var i = 0, l = geo_points.length; i < l; i++) {
                              // два варианта нахождения последнего символа, в строке описания каждой точки маршрута
@@ -499,7 +492,15 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // Редактируем контекстное меню, вершин ломаной. Получаем значения 'id' стандартных пунктов меню.
                          myGeoObject.editor.options.set({
                           menuManager:function(editorItems, model){
-                            //console.log(editorItems);
+                            // Механизм получения координат вершины по которой кликнули. И добавление нового балуна по ним.
+                            // Скрываем, если был открыт балун до этого на карте.
+                            myMap.balloon.close();
+                            // Получаем координаты вершины
+                            var coords_vertex = model.geometry.getCoordinates();
+                            // Открываем  новый балун по ним
+                            myMap.balloon.open(coords_vertex, {contentBody: "<b>Координаты аэропорта:</b><br /> " + coords_vertex});
+                            //console.log(model.geometry.getCoordinates());
+
                             //console.log(model);
                             for(var i=0; i<editorItems.length; i++){
                             //console.log(editorItems[i].id);
@@ -520,13 +521,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                               // Определяем индекс удаляемой вершины
                               var vertexIndex = model.getIndex();
+
                               // Удаляем вершину по полученному индексу.
                               myGeoObject.geometry.remove(vertexIndex);
 
                               // узнаем тип системы координат
                               var coordSystem_1 = myMap.options.get('projection').getCoordSystem(),
                               distance_aero_length_1 = 0;
-                              // // получаем массив пиксельных данных модели ломаной, из объекта-обещания
+                              // получаем массив пиксельных данных модели ломаной, из объекта-обещания
                               model_point = myGeoObject.editor.getModel().getPixels();
                               // получаем из глобальных пикс. координат, гео координаты, для дальнейшего их использования в построении ломаной авиамаршрута
                               for(var w = 0, d = model_point.length; w < d; w++) {
@@ -661,6 +663,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                               id: "routedelete",
                               title: "Удалить маршрут",
                               onClick: function () {
+                              // Скрываем, открытые балуны на карте.
+                              myMap.balloon.close();
                               // Очищаем блоки данных, с информацией по авиамаршруту. При нажатии на кнопку "Удалить маршрут". В контекстном меню метки.
                               $(".route-length1").empty();
                               $(".route-length2").empty();
@@ -759,7 +763,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 			               }
                            // Фильтрация данных массива 'point_aero' с гео координатами точек маршрута. Убираем из него undefined и null.
                            point_aero = point_aero.filter(function(x) { return x !== "undefined" && x !== undefined && x !== null; });
-                           //ЗАВЕРШЕНИЕ МЕХАНИЗМА ОПРЕДЕЛЕНИЯ БЛИЖ. АЭРОПОРТА К ДОБАВЛЕННОЙ ВЕРШИНЕ ЛОМАНОЙ. И ГЕОКОДИРОВАНИЯ ПОЛУЧЕННЫХ ТОЧЕК ВЕРШИН. В РЕЖИМЕ РЕДАКТИРОВАНИЯ ЛОМАНОЙ ПО СОБЫТИЮ 'VERTEXADD'.
+                           //ЗАВЕРШЕНИЕ МЕХАНИЗМА ОПРЕДЕЛЕНИЯ БЛИЖ. АЭРОПОРТА К ДОБАВЛЕННОЙ ВЕРШИНЕ ЛОМАНОЙ. И ГЕОКОДИРОВАНИЯ ПОЛУЧЕННЫХ ТОЧЕК ВЕРШИН. В РЕЖИМЕ РЕДАКТИРОВАНИЯ ЛОМАНОЙ ПО СОБЫТИЯМ 'VERTEXADD' И 'VERTEXDRAGEND'.
 
 
                            // Вычисляем общую длину ломаной, через кол-во ее точек
@@ -996,12 +1000,16 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          // Если все значения выбраны, начинаем исходя из них, строить автомаршрут.
                          else
                          {
-                         $.getScript('http://intranet.russiancarbon.org/f/min/map/car.js', function () {
+                         // Добавляем новый объект на карту("машинку"), класса car.
+                         $.getScript('../f/min/map/car1.js', function () {
+                           car = new Car();
+                           /*
                            car = new Car({
-                           iconLayout: ymaps.templateLayoutFactory.createClass(
-                           '<div class="b-car b-car_blue b-car-direction-$[properties.direction]"></div>'
-                           )
-                         });
+                             iconLayout: ymaps.templateLayoutFactory.createClass(
+                             '<div class="b-car b-car_blue b-car-direction-$[properties.direction]"></div>'
+                             )
+                           });
+                           */
                          ymaps.route(point, {
                             // Опции маршрутизатора
                             avoidTrafficJams: true, // строить маршрут с учетом пробок
@@ -1023,6 +1031,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          if (placemark.options.get('iconImageHref') == '/f/min/images/car.png'){
                          // добавляем маршрут на карту
                          myMap.geoObjects.add(route);
+
+                         console.log('Число сегментов маршрута: ', route.getPaths().get(0).getSegments());
 
                          // И "машинку" туда же
                          myMap.geoObjects.add(car);
@@ -1095,6 +1105,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            // получаем координаты точки маршрута, по которой кликнули
                            var coords_route_point = e.get('coordPosition');
 
+                           // определяем ее индекс
+                           var index_point = points.indexOf(target);
+
                            // получаем метку по которой кликнули
                            var target = e.get('target');
 
@@ -1165,11 +1178,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            route.getWayPoints().get(i);
 		                  }
 
-                          // Удаляем картинку атобуса, с карты.
+                          // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
                           myMap.geoObjects.remove(car);
                           for(var j = 0, k = markers_route.length; j < k; j++) {
 		                   myMap.geoObjects.remove(markers_route[j]);
 		                  }
+                          markers_route = [];
 
                           // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                           markers = [];
@@ -1333,6 +1347,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 		           myMap.geoObjects.remove(markers[i]);
 		         }
 
+                 // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
+                 myMap.geoObjects.remove(car);
+                 for(var j = 0, k = markers_route.length; j < k; j++) {
+		           myMap.geoObjects.remove(markers_route[j]);
+		         }
+                 markers_route = [];
+
                  // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                  markers = [];
         	     point = [];
@@ -1432,11 +1453,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          route.getWayPoints().get(i);
 		               }
 
-                       // Удаляем картинку атобуса, с карты.
+                       // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
                        myMap.geoObjects.remove(car);
                        for(var j = 0, k = markers_route.length; j < k; j++) {
 		                 myMap.geoObjects.remove(markers_route[j]);
 		               }
+                       markers_route = [];
 
                        // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                        markers = [];
@@ -1553,9 +1575,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                 });
                 // ЗАВЕРШЕНИЕ ОТСЛЕЖИВАНИЯ СОБЫТИЯ ОБНОВЛЕНИЯ МАРШРУТА.
 
-                // Отправляем машинку по полученному маршруту простым способом
-                // car.moveTo(route.getPaths().get(0).getSegments());
-                // или чуть усложненным: с указанием скорости,
+                // Отправляем машинку по полученному маршруту более простым способом, с указанием скорости движения.
+                car.moveTo(route.getPaths().get(0).getSegments(), {
+                   speed: 70,
+                   directions: 8
+                });
+                /*
+                // или чуть усложненным: с указанием скорости и свойств,
                 car.moveTo(route.getPaths().get(0).getSegments(), {
                    speed: 50,
                    directions: 8
@@ -1569,6 +1595,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                 geoObject.properties.set('balloonContent', "Приехали!");
                 geoObject.balloon.open();
                 });
+                */
                 // ЗАКАНЧИВАЕМ ПРОКЛАДЫВАТЬ АВТОМАРШРУТ ПО ПЕРЕНЕСЕННЫМ МЕТКАМ ИЗ ТУЛБАРА
 
                          }, function (error) {
@@ -1764,11 +1791,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 		                       myMap.geoObjects.remove(markers[i]);
 		                      }
 
-                              // Удаляем картинку атобуса, с карты.
+                              // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
                               myMap.geoObjects.remove(car);
                               for(var j = 0, k = markers_route.length; j < k; j++) {
-		                       myMap.geoObjects.remove(markers_route[j]);
+		                        myMap.geoObjects.remove(markers_route[j]);
 		                      }
+                              markers_route = [];
 
                               // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                               markers = [];
@@ -1909,9 +1937,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              // собираем информацию о всех точках автомаршрута, добавленного несколькими кликами по карте.
              // добавляем текстовую информацию(firstGeoObject_text.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
              geo_points.push(firstGeoObject_text);
-             // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
+             // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке справа от карты "Все точки авиамаршрута:".
              for(var i = 0, l = geo_points.length; i < l; i++) {
-			 point_geo[i] = '<br /> &bull; ' + geo_points[i];
+			   point_geo[i] = '<br /> &bull; ' + geo_points[i];
 			 }
              if(markers.length == 1)
              {
@@ -2059,8 +2087,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 		         myMap.geoObjects.remove(markers[i]);
 		       }
 
-               // Удаляем картинку атобуса, с карты.
+               // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
                myMap.geoObjects.remove(car);
+               for(var j = 0, k = markers_route.length; j < k; j++) {
+		         myMap.geoObjects.remove(markers_route[j]);
+		       }
+               markers_route = [];
 
                // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                markers = [];
@@ -2106,7 +2138,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              else
              {
 
-              $.getScript('http://intranet.russiancarbon.org/f/min/map/car.js', function () {
+              $.getScript('../f/min/map/car.js', function () {
                 car = new Car({
                 iconLayout: ymaps.templateLayoutFactory.createClass(
                 '<div class="b-car b-car_blue b-car-direction-$[properties.direction]"></div>'
@@ -2127,6 +2159,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                 // И "машинку" туда же
                 myMap.geoObjects.add(car);
+
+                // Добавляем также объект 'car' в массив 'markers_route'. Если машинок добавлено сразу несколько на карту.
+                markers_route.push(car);
 
                 // Получаем отдельные пути маршрута
                 var way_m_paths = route.getPaths();
@@ -2207,9 +2242,15 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                         // Удаляем картинку атобуса, с карты.
                         myMap.geoObjects.remove(car);
+                        for(var j = 0, k = markers_route.length; j < k; j++) {
+		                  myMap.geoObjects.remove(markers_route[j]);
+		                }
 
                         // Удаление точки маршрута по которой кликнули, с карты и из коллекции GeoObjectArray, с точками маршрута.
                         points.remove(target);
+
+                        // определяем ее индекс
+                        var index_point = points.indexOf(target);
 
                         // Закрываем открытый балун метки, с кнопками "Удалить метку", "Удалить маршрут".
                         myMap.balloon.close();
@@ -2260,8 +2301,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          route.getWayPoints().get(i);
 		               }
 
-                       // Удаляем картинку атобуса, с карты.
+                       // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
                        myMap.geoObjects.remove(car);
+                       for(var j = 0, k = markers_route.length; j < k; j++) {
+		                 myMap.geoObjects.remove(markers_route[j]);
+		               }
+                       markers_route = [];
 
                        // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                        markers = [];
@@ -2427,8 +2472,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 		           myMap.geoObjects.remove(markers[i]);
 		         }
 
-                 // Удаляем картинку атобуса, с карты.
+                 // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
                  myMap.geoObjects.remove(car);
+                 for(var j = 0, k = markers_route.length; j < k; j++) {
+		           myMap.geoObjects.remove(markers_route[j]);
+		         }
+                 markers_route = [];
 
                  // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                  markers = [];
@@ -2530,8 +2579,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          route.getWayPoints().get(i);
 		               }
 
-                       // Удаляем картинку атобуса, с карты.
+                       // Удаляем картинку атобуса, с карты. И очищаем массив 'markers_route', с добавленными в него картинками автобуса.
                        myMap.geoObjects.remove(car);
+                       for(var j = 0, k = markers_route.length; j < k; j++) {
+		                 myMap.geoObjects.remove(markers_route[j]);
+		               }
+                       markers_route = [];
 
                        // Обнуляем массивы с точками и координатами точек, всех меток маршрута.
                        markers = [];
