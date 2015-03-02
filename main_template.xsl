@@ -1,11 +1,6 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xsl:stylesheet[ <!ENTITY % core SYSTEM "_entities.ent"> %core; ]>
 
-<!--
- Copyright (c) Art. Lebedev | http://www.artlebedev.ru/
- Updated 2014-11-05 by Rie
--->
-
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:import href="main.xsl" />
