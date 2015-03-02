@@ -68,8 +68,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
   Map.prototype.createMap = function () {
 
-    var i, ii, route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_route, type_fuel, type_travel, type_aero, type_rad, firstGeoObject_text,
-    firstGeoObject_text_route_first, firstGeoObject_text_route, num, rad, aero_num_people, way_m, visibleObjects, firstGeoObject_1, ballon_aero, text, distance_aero_length, car,
+    var i, ii, route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_route, type_fuel, type_travel, type_aero, type_rad, firstGeoObject_text, firstGeoObject_text_route_first,
+    firstGeoObject_text_route, firstGeoObject_text_avio_first, num, rad, aero_num_people, way_m, visibleObjects, firstGeoObject_1, ballon_aero, text, distance_aero_length, car,
        ch = 1, el = this.root.get(0);
     var markers = [];
 	var point = [];
@@ -489,16 +489,38 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          });
                          }
 
+                         // Добавляем линию авиамаршрута на карту.
+                         myMap.geoObjects.add(myGeoObject);
+
+                         // Включаем режим редактирования ломаной.
+                         myGeoObject.editor.startEditing();
+                         // Включаем режим добавления новых вершин в ломаную линию.
+                         //myGeoObject.editor.startDrawing();
+
+                         /*
+                         // Получаем значение поля 'drawing' редактора. Для передачи его в отслеживающий монитор 'stateMonitor'.
+                         myGeoObject.editor.state.get('drawing');
+                         */
+
                          // Редактируем контекстное меню, вершин ломаной. Получаем значения 'id' стандартных пунктов меню.
                          myGeoObject.editor.options.set({
                           menuManager:function(editorItems, model){
-                            // Механизм получения координат вершины по которой кликнули. И добавление нового балуна по ним.
+                            // Механизм получения координат вершины ломаной по которой кликнули. И добавление нового балуна по ним.
                             // Скрываем, если был открыт балун до этого на карте.
                             myMap.balloon.close();
                             // Получаем координаты вершины
                             var coords_vertex = model.geometry.getCoordinates();
+
+                            // Производим геокодирование первой путевой точки
+                            ymaps.geocode(coords_vertex).then(function (res) {
+                              var firstGeoObject_avio = res.geoObjects.get(0);
+                              firstGeoObject_text_avio_first = firstGeoObject_avio.properties.get('text');
+                              //console.log('Местонахождение новой точки авиамаршрута: ', firstGeoObject_text_avio_first);
+                              myMap.balloon.open(coords_vertex, {contentBody: "<b style='color: #ddb505; font-size: 14px;'>Местонахождение:</b><br /> <i style='font-size: 12px;'>" + firstGeoObject_text_avio_first + '</i>'});
+                           });
+                            //console.log('Местонахождение новой точки авиамаршрута: ', firstGeoObject_text_avio_first);
+
                             // Открываем  новый балун по ним
-                            myMap.balloon.open(coords_vertex, {contentBody: "<b>Координаты аэропорта:</b><br /> " + coords_vertex});
                             //console.log(model.geometry.getCoordinates());
 
                             //console.log(model);
@@ -850,19 +872,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                           $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При перелете на выбранную дистанцию ' + distance_aero_main_2 + ' км.</small>');
                           //console.log('init add', point_aero);
                          });
-
-                         // Добавляем линию авиамаршрута на карту.
-                         myMap.geoObjects.add(myGeoObject);
-
-                         // Включаем режим редактирования ломаной.
-                         myGeoObject.editor.startEditing();
-                         // Включаем режим добавления новых вершин в ломаную линию.
-                         //myGeoObject.editor.startDrawing();
-
-                         /*
-                         // Получаем значение поля 'drawing' редактора. Для передачи его в отслеживающий монитор 'stateMonitor'.
-                         myGeoObject.editor.state.get('drawing');
-                         */
 
                          if(point_aero.length > 1){
                           // Устанавливаем центр и масштаб карты так, чтобы отобразить всю прямую авиамаршрута целиком. Устанавливаем на карте границы линии авиамаршрута.
