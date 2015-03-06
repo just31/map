@@ -2136,13 +2136,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
              // Если не выбран тип топлива, добавляем в блок справа от карты предупреждающий текст.
              if((typeof type_fuel == "undefined"))
-             {$(".route-length_fuel").append('<h3><small>Выберите пожалуйста все данные</small></h3>');}
+             {$(".route-length_fuel").append('<h3>Выберите пожалуйста все данные</h3>');}
              // Или, если не выбран тип поездки, добавляем в блок справа от карты предупреждающий текст.
              else if((typeof type_travel == "undefined"))
-             {$(".route-length_fuel").append('<h3><small>Выберите пожалуйста все данные</small></h3>');}
+             {$(".route-length_fuel").append('<h3>Выберите пожалуйста все данные</h3>');}
              // Или, если не выбран тип маршрута, добавляем в блок справа от карты предупреждающий текст.
              else if((typeof type_route == "undefined"))
-             {$(".route-length_fuel").append('<h3><small>Выберите пожалуйста все данные</small></h3>');}
+             {$(".route-length_fuel").append('<h3>Выберите пожалуйста все данные</h3>');}
              // Если все селекторы выбраны, то начинаем строить маршрут, по двум первым, отмеченным точкам.
              else
              {
@@ -2389,9 +2389,57 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                 // округляем значение до одного знака после запятой
                 var co_auto_1 = co_auto.toFixed(1);
 
+
+                // МЕХАНИЗМ ВЫВОДА ДАННЫХ ПО АВТОМАРШРУТУ В МОДАЛЬНОМ ОКНЕ. ПРИ ПОСТРОЕНИИ МАРШРУТА КЛИКОМ ПО КАРТЕ.
+                // Очищаем блок с данными модального окна, после каждого передобавления маршрута.
+                $(".route-modal-length").empty();
+
+                // Объявляем переменные для вывода данных в модальном окне. По типу поездки, маршрута, топлива. Также переменная для подсчета общего пробега за год, в зависимости от типа поездки.
+                var type_travel_type;
+                var type_marshrut;
+                var type_travel_fuel;
+                var type_travel_route;
+
+                // Определяем тип маршрута, для вывода его в модальном окне.
+                if(type_route == "Сonversely")
+                {
+                  type_marshrut = 'Тип маршрута: <small class="text-warning">Туда и обратно</small>';
+                }
+                else if(type_route == "Forwards")
+                {
+                  type_marshrut = 'Тип маршрута: <small class="text-warning">Только в одну сторону</small>';
+                }
+
+                // Определяем тип топлива, для вывода его в модальном окне.
+                if(type_fuel == "Gazoline")
+                {
+                  type_travel_fuel = 'Выбран тип топлива: <small class="text-warning">Бензин</small>';
+                }
+                else if(type_fuel == "Diesel")
+                {
+                  type_travel_fuel = 'Выбран тип топлива: <small class="text-warning">Дизель</small>';
+                }
+
+                // Определяем значение общего пробега за год, в зависимости от типа поездки: на работу или на дачу. Определяем тип поездки, на работу или на дачу. Выводим полученные данные в модальном окне.
+                if(type_travel == "Work"){
+                   type_travel_route = way_m_car_11;
+                   type_travel_type = 'Выбрана поездка: <small class="text-warning">До работы</small>';
+                }
+                else
+                {
+                  type_travel_route = way_m_home_11;
+                  type_travel_type = 'Выбрана поездка: <small class="text-warning">До дачи</small>';
+                }
+
+                // Добавляем всплывающее, модальное окно, для вывода в нем основной информации по маршруту.
+                $(".route-modal-length").append('<div id="myModalBox" class="modal fade"><div class="modal-dialog"><div class="modal-content"><div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button><h4 class="modal-title">Данные маршрута</h4></div><div class="modal-body"><p>' + type_travel_type + '</p><p>' + type_marshrut + '</p><p>' + type_travel_fuel + '</p><br /><p>Общая длина маршрута: <small class="text-warning">' + route.getHumanLength() + '</small></p><p>Время в пути: <small class="text-warning">' + route.getHumanTime() + '</small></p><p>Углеродный след: <small class="text-warning">' + co_auto_1 + ' кгСО2/л.</small></p><p>За год вы проедете примерно: <small class="text-warning">' + type_travel_route + ' км.</small></p></div><div class="modal-footer"><button type="button" class="btn btn-primary" data-dismiss="modal">Закрыть</button></div></div></div></div>');
+                // Вызываем метод, показа модального окна с данными по маршруту.
+                $("#myModalBox").modal('show');
+                // ЗАВЕРШЕНИЕ МЕХАНИЗМА ВЫВОДА ДАННЫХ ПО МАРШРУТУ В МОДАЛЬНОМ ОКНЕ.
+
                 // Выводим данные по маршруту, в блоке справа от карты. Первоначальная длина, время и углеродный след.
                 $(".route-length1").append('<h3>Общая длина маршрута: <strong>' + route.getHumanLength() + '</strong></h3>');
-			    $(".route-length1").append('<h3>Время в пути: <strong>' + route.getHumanTime()+ '</strong></h3>');
+			    $(".route-length1").append('<h3>Время в пути: <strong>' + route.getHumanTime() + '</strong></h3>');
                 $(".route-length1").append('<h3>Углеродный след: <strong>' + co_auto_1 + ' кгСО2/л.</strong></h3>');
 
                 // Выводим значение общего пробега за год, в зависимости от типа поездки: на работу или на дачу.
