@@ -1,6 +1,11 @@
 ﻿<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE xsl:stylesheet[ <!ENTITY % core SYSTEM "_entities.ent"> %core; ]>
 
+<!--
+ Copyright (c) Art. Lebedev | http://www.artlebedev.ru/
+ Updated 2014-11-05 by Rie
+-->
+
 <xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
 
   <xsl:import href="main.xsl" />
@@ -15,10 +20,10 @@
                     <xsl:value-of select="&current_document;/window-title" />
                 </title>
                 <link rel="icon" href="/favicon.ico" type="image/x-icon" />
-                <link rel="stylesheet" href="http://webmap-blog.ru/examples/add-users-ymapsapi2/css/bootstrap.min.css"/>
-                <link rel="stylesheet" href="http://intranet.russiancarbon.org/f/min/map/car.css"/>
-                <link rel="stylesheet" href="http://netdna.bootstrapcdn.com/twitter-bootstrap/2.1.0/css/bootstrap-combined.min.css"/>
+                <link rel="stylesheet" href="/f/min/bootstrap/bootstrap.css"/>
+                <link rel="stylesheet" href="/f/min/map/car.css"/>
                 <script type="text/javascript" src="/f/min/main.build.js"></script>
+                <script type="text/javascript" src="/f/min/bootstrap/bootstrap.js"></script>
                 <style type="text/css">
                   @font-face {
                     font-family: OpenSans-Regular; /* Гарнитура шрифта */
@@ -30,7 +35,7 @@
                     text-align: justify;
                     text-shadow: 0 1px 1px rgba(0,0,0,.1);
                   }
-                  h1 {margin-left: 10px !important; font-size: 22px; font-family: OpenSans-Regular; color: #B0BEA4;}
+                  h1 {margin-left: 10px !important; font-size: 24px; font-family: OpenSans-Regular; color: #B0BEA4;}
                   .main {
                     margin-left: 10px;
                   }
@@ -75,6 +80,12 @@
                   }
                   .route-length2 h3 {font-size: 13px; color: color: #FEFFF9;}
                   .route-length2 strong {font-size: 11px; color: #ddb505; font-weight: normal;}
+                  .route-modal-length {
+                     text-align: left;
+                     font-size: 15px; color: Grey !important;
+                     font-family: Verdana;
+                     margin: -5px 0 0 10px;
+                  }
                   .content_map3 {
                      margin: -10px 0 0 0;
                      overflow:hidden;
@@ -88,8 +99,8 @@
                      width: auto;
                   }
                   #map_main {
-                     width: 99%;
-                     height: 877px;
+                     width: 100%;
+                     height: 890px;
                      margin-top: 7px; ]
                      margin-right: 5px;
                      background-color: #eee;
@@ -174,7 +185,7 @@
                      padding: 10px; border-radius: 2px; font-size: 13px; color: #000000 !important;
                   }
                   #content_map1 strong {font-size: 14px; color: @carbon-orange;}
-                  .toolbar{width: 7% !important;}
+                  .toolbar{width:100% !important;}
                   .toolbar td, th {
                      padding: 0px;
                      border: 1px solid #333;
@@ -187,6 +198,15 @@
                   tr, td, th {
                      padding: 0px;
                      border: 1px solid #333;
+                  }
+                  .result-co2 p {
+                     font-family: OpenSans-Regular;
+                     font-size: 24px;
+                     color: #B0BEA4;
+                     margin-right: 5px;
+                  }
+                  .result-co2 small{
+                     font-size: 14px;
                   }
                   .row-fluid{
                      margin-left: 5px !important;
