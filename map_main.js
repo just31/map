@@ -5,6 +5,9 @@
 define('map_main', ['jquery', 'als'], function ($, als) {
   'use strict';
 
+  // Делаем div класса 'span12', невидимым перед загрузкой карты.
+  //$(".span12").hide();
+
   document.addEventListener('DOMContentLoaded', function() {
     var toolbar = document.getElementById('toolbar'),
         iframe = toolbar && toolbar.firstElementChild;
@@ -112,21 +115,54 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     // Иначе this.yMap, не будет доступен внутри них.
     myMap = this.yMap;
 
-    // Добавляем тестово метку на карту, по координатам пользователся. В ее балуне, выводим страну, город, область(регион). Делаем ее невидимой.
-    myMap.geoObjects.add(
-        new ymaps.Placemark(
+    // Добавляем в центр карты метку, по координатам пользователся. В ее балуне, информацию по построению нового маршрута. Делаем ее невидимой.
+    //myMap.geoObjects.add(
+    placemark_new = new ymaps.Placemark(
             coords_location,
             {
                 // В балуне: страна, город, регион.
-                balloonContentHeader: geolocation.country,
-                balloonContent: geolocation.city,
-                balloonContentFooter: geolocation.region
+                //balloonContentHeader: geolocation.country,
+                //balloonContent: geolocation.city,
+                //balloonContentFooter: geolocation.region
+                balloonContentHeader: "<i style='color: #99490E;'>Построение нового маршрута</i>",
+                balloonContent: "Чтобы начать строить новый маршрут(авто или авиа), перетяните метку машинки или самолетика на карту. Поставив ее там, откуда вы хотите начать маршрут. Дальнейшие пояснения будут в открытой подсказке, первой установленной метки.",
+                //hintContent: "Нажмите чтобы начать строить маршрут."
             },
             {
-                visible: false
+               'iconLayout': 'default#image',
+               'iconImageHref': '/f/min/images/car.png',
+               'iconImageSize': [55, 54],
+               'iconImageOffset': [-(55 / 2), -14],
+               visible: false,
+               // Отключаем кнопку закрытия балуна.
+               balloonCloseButton: false
             }
-        )
-    );
+        );
+    //);
+    // Добавляем метку на карту.
+    myMap.geoObjects.add(placemark_new);
+
+    // Устанавливаем опции и свойства новой метки.
+    // Шаблон вывода хинта метки
+    placemark_new.options.set('hintContentLayout', ymaps.templateLayoutFactory.createClass("<span style='color: #99490E;'>$[properties.hintContent]</span>"));
+    placemark_new.properties.set('hintContent', "Нажмите, чтобы начать строить маршрут.");
+    //placemark_new.properties.set({'balloonContentFooter': '<a href="#" class="btn btn-warning" id="switch_close">Скрыть пояснение</a>  <div class="span12"><img class="icon" id="icon01" src="/f/min/images/car.png" draggable="true"/><img class="icon" id="icon02" src="/f/min/images/airplane.png" draggable="true"/></div>'});
+    // Добавляем значки машинки и самолетика, к балуну метки.
+    placemark_new.properties.set({'balloonContentFooter': '<div><img class="icon" id="icon01" src="/f/min/images/car.png" draggable="true" width="45px" /><img class="icon" id="icon02" src="/f/min/images/airplane.png" draggable="true" width="45px" /></div>'});
+    // Добавляем опции, если открыт балун метку не скрываем и устанавливаем ей минимальный приоритет. Чтобы балун был поверх нее.
+    //placemark_new.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
+    // Открываем балун с информацией по построению маршрута, на карте, после ее загрузки.
+    placemark_new.balloon.open();
+
+    /*
+    //Получаем идентификатор 'switch', ссылки "Удалить метку".
+    var point_delete = document.getElementById('switch_close');
+    point_delete.onclick = function() {
+       myMap.balloon.close();
+       placemark_new.options.set('visible', false);
+       myMap.geoObjects.remove(placemark_new);
+    };
+    */
 
     // Добавляем геоколллекцию меток аэропортов на карту
     // Создание пустой геоколллекции myCollection, для добавления в нее списка аэропортов из файла aero3.csv.
@@ -268,6 +304,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         e.preventDefault();
                         // dropEffect должен совпадать с effectAllowed.
                         e.dataTransfer.dropEffect = 'copy';
+                        // Закрываем балун с информацией по построению маршрута. После начала перетягивания метки машинки или самолетика, из балуна.
+                        myMap.balloon.close();
                     })
                     .on('drop', function (e) {
                         // не работает в FF = поэтому делаем return false вконце
@@ -289,7 +327,6 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                                 preset: 'twirl#airplaneIcon',
                                 balloonContentBodyLayout: myBalloonContentBodyLayout
                             };
-
                         // Создаем метку и добавляем ее на карту.
                         if(markers.length < 100)
 			            {
@@ -297,6 +334,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          myMap.geoObjects.add(createPlacemark(coordinates, options));
                          // делаем ее видимой, передаем далее в скрипте, вывод меток маршрута, механизму маршрутизатизации route().
                          placemark.options.set('visible', true);
+
+                         // После добавления первой метки нового маршрута, делаем видимыми значки машинки и самолетика, в блоке '.span12' вверху над картой.
+                         $(".span12").css({'opacity' : '1'});
+                         //$(".span12".css("opacity", "1"));
 
                          // Если строится автомаршрут, перетягиванием метки из тулбара, то добавляем его точки в массив markers.
                          if (placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
@@ -355,7 +396,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                            //console.log('aeroport', closestObject_1.getData().properties.get('balloonContent'));
                            // Вначале создаем сам балун - placemark.properties.set("balloonContentBody", ...
                            placemark.properties.set("balloonContentBody",
-'<div id="menu"><h3 style="font-size: 14px;">Начальная точка авиамаршрута: <i style="color: #999966;">' + closestObject_1.getData().properties.get('balloonContent') + '</i></h3>Прежде чем продолжить строить авиамаршрут, выберите ниже в форме необходимые данные по нему. И после, перетащите следующую метку на карту. Форма и балун будут скрыты, после выбора всех значений.<br /><br /> Точки авиамаршрута редактируются, добавляются/удаляются через редактор метки. Редактор открывается кликом по любой из меток авиамаршрута.<br /><br /><small style="color: #1D3B3B;">Укажите кол-во пассажиров:</small><br /> <input type="text" class="input-medium" id="col_text" name="col_text" style="width: 145px !important;" /><br /></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип полета:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Сonversely">Перелет туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Количество радиации в атмосфере:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/qKhPY0P5zQRTChD09SLAfjK__yQ.png" style="height: 20px" /></span><select name="rad_select" id="rad_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="middle">Среднее</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="small">Небольшое</option></select></div><div id="menu">');
+'<div id="menu"><h3 style="font-size: 14px;">Начальная точка авиамаршрута: <i style="color: #999966;">' + closestObject_1.getData().properties.get('balloonContent') + '</i></h3>Прежде чем продолжить строить авиамаршрут, выберите ниже в форме необходимые данные по нему. И после, перетащите следующую метку самолетика на карту. Форма и балун будут скрыты, после выбора всех значений.<br /><br /> Точки авиамаршрута редактируются, добавляются/удаляются через редактор метки. Редактор открывается кликом по любой из меток авиамаршрута.<br /><br /><small style="color: #1D3B3B;">Укажите кол-во пассажиров:</small><br /> <input type="text" class="input-medium" id="col_text" name="col_text" style="width: 145px !important;" /><br /></div><div id="menu"> <small style="color: #1D3B3B;">Выберите тип полета:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" style="height: 20px" /></span><select name="route_select" id="route_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Сonversely">Перелет туда и обратно</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/V_fA6Nuj14hNeUGwuyPT9j6UBcU.png" value="Forwards">Только в одну сторону</option></select></div><small style="color: #1D3B3B;">Количество радиации в атмосфере:</small></div><div class="input-prepend"><span class="add-on"><img src="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/qKhPY0P5zQRTChD09SLAfjK__yQ.png" style="height: 20px" /></span><select name="rad_select" id="rad_select" class="span2" style="width: 200px !important;"><option data-path="" value="">...</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="middle">Среднее</option><option data-path="https://yastatic.net/doccenter/images/tech-ru/maps/doc/freeze/pVcsNFLAjNAt-xM_b5tqoqwkG2Y.png" value="small">Небольшое</option></select></div><div id="menu">');
 
                            // Открываем балун с выбором данных по маршруту, на карте.
                            placemark.balloon.open();
