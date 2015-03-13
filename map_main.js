@@ -131,9 +131,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
             {
                'iconLayout': 'default#image',
                'iconImageHref': '/f/min/images/car.png',
-               'iconImageSize': [55, 54],
-               'iconImageOffset': [-(55 / 2), -14],
-               visible: false,
+               'iconImageSize': [75, 74],
+               'iconImageOffset': [-(75 / 2.7), -80],
+               visible: true,
                // Отключаем кнопку закрытия балуна.
                balloonCloseButton: false
             }
@@ -145,14 +145,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     // Устанавливаем опции и свойства новой метки.
     // Шаблон вывода хинта метки
     placemark_new.options.set('hintContentLayout', ymaps.templateLayoutFactory.createClass("<span style='color: #99490E;'>$[properties.hintContent]</span>"));
-    placemark_new.properties.set('hintContent', "Нажмите, чтобы начать строить маршрут.");
+    placemark_new.properties.set('hintContent', "Нажмите, чтобы построить маршрут");
     //placemark_new.properties.set({'balloonContentFooter': '<a href="#" class="btn btn-warning" id="switch_close">Скрыть пояснение</a>  <div class="span12"><img class="icon" id="icon01" src="/f/min/images/car.png" draggable="true"/><img class="icon" id="icon02" src="/f/min/images/airplane.png" draggable="true"/></div>'});
-    // Добавляем значки машинки и самолетика, к балуну метки.
-    placemark_new.properties.set({'balloonContentFooter': '<div><img class="icon" id="icon01" src="/f/min/images/car.png" draggable="true" width="45px" /><img class="icon" id="icon02" src="/f/min/images/airplane.png" draggable="true" width="45px" /></div>'});
+    // Добавляем значки машинки и самолетика, в футер балуна метки.
+    placemark_new.properties.set({'balloonContentFooter': '<div><img class="icon" id="icon01" src="/f/min/images/car.png" draggable="true" width="45px" /><img class="icon_1" id="icon02" src="/f/min/images/airplane.png" draggable="true" width="45px" /></div>'});
     // Добавляем опции, если открыт балун метку не скрываем и устанавливаем ей минимальный приоритет. Чтобы балун был поверх нее.
     //placemark_new.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
     // Открываем балун с информацией по построению маршрута, на карте, после ее загрузки.
-    placemark_new.balloon.open();
+    //placemark_new.balloon.open();
 
     /*
     //Получаем идентификатор 'switch', ссылки "Удалить метку".
@@ -293,7 +293,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         })
                         // При открытии балуна выключаем перетаскивание.
                         .add('balloonopen', function (e) {
-                            placemark.options.set('draggable', false);
+                            placemark.options.set('draggable', true);
                         });
 
                     return placemark;
@@ -305,14 +305,57 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         // dropEffect должен совпадать с effectAllowed.
                         e.dataTransfer.dropEffect = 'copy';
                         // Закрываем балун с информацией по построению маршрута. После начала перетягивания метки машинки или самолетика, из балуна.
-                        myMap.balloon.close();
+                        if((typeof placemark != "undefined")){
+                           // Если метка placemark, перетянута из блока сверху над картой. То ничего не делаем.
+                        }
+                        else{
+                           // Иначе закрываем балун. Если метка тянется из балуна с первичной информацией.
+                           myMap.balloon.close();
+                        }
+                        // Удаляем метку с пояснениями с карты.
+                        myMap.geoObjects.remove(placemark_new);
+                        //console.log('Id элемента', e.dataTransfer.setData('TEXT', e.target.getAttribute('id')));
+                        if(e.dataTransfer.getData('TEXT') == 'http://intranet.russiancarbon.org/f/min/images/airplane.png'){
+                          myMap.setZoom(5);
+                        }
                     })
                     .on('drop', function (e) {
                         // не работает в FF = поэтому делаем return false вконце
                         e.stopPropagation();
 
-                        // Находим DOM-элемент иконки по идентификатору из данных.
-                        icon = $('#' + e.dataTransfer.getData('TEXT')),
+                        // Обходим механизм получения id значка. Т.к. в функции $('.icon').on('dragstart', function (e) { }), он не работает. Из-за того, что изначально на карте, балун с данными по картинкам, закрыт.
+                        var pict_id;
+                        /*
+                        var img_route = $(".icon").attr("id");
+                        var img_route_1 = $(".icon_1").attr("id");
+
+                        if((typeof img_route != "undefined"))
+                        {
+                          pict_id = img_route;
+                        }
+                        if((typeof img_route_1 != "undefined"))
+                        {
+                          pict_id = img_route_1;
+                        }
+                        */
+                        // Если перетянута из балуна картинка машинки, присваиваем ее id, переменной pict_id.
+                        if(e.dataTransfer.getData('TEXT') == 'http://intranet.russiancarbon.org/f/min/images/car.png')
+                        {
+                          console.log('Перетянут значок машинки');
+                          pict_id = 'icon01';
+                        }
+                        // Если перетянута из балуна картинка самолетика, присваиваем ее id, переменной pict_id.
+                        if(e.dataTransfer.getData('TEXT') == 'http://intranet.russiancarbon.org/f/min/images/airplane.png')
+                        {
+                          console.log('Перетянут значок самолетика');
+                          pict_id = 'icon02';
+                        }
+
+                        // Если перетягивание метки, происходило из балуна с информацией, проверяем значение переменной 'pict_id'.
+                        // Если переменная 'pict_id' не пустая, находим DOM-элемент иконки по идентификатору 'pict_id'.
+                        if((typeof pict_id != "undefined"))
+                        {
+                            icon = $('#' + pict_id),
                             // Размеры иконки.
                             width = icon.width(), height = icon.height(),
                             // Геокоординаты метки.
@@ -327,6 +370,28 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                                 preset: 'twirl#airplaneIcon',
                                 balloonContentBodyLayout: myBalloonContentBodyLayout
                             };
+                        }
+                        // Иначе получаем значение id картинки, механизмом по умолчанию $('#' + e.dataTransfer.getData('TEXT')). Из e.dataTransfer.getData('TEXT')), установленной выше.
+                        else
+                        {
+                            icon = $('#' + e.dataTransfer.getData('TEXT')),
+                            // Размеры иконки.
+                            width = icon.width(), height = icon.height(),
+                            // Геокоординаты метки.
+                            coordinates = pageToGeo([e.originalEvent.pageX, e.originalEvent.pageY]),
+                            // Объект опций метки.
+                            options = {
+                                iconImageHref: icon.attr('src'),
+                                iconImageSize: [width, height],
+                                iconImageOffset: [-(width / 2), -height],
+                                draggable: true,
+                                'visible': true,
+                                preset: 'twirl#airplaneIcon',
+                                balloonContentBodyLayout: myBalloonContentBodyLayout
+                            };
+                        }
+                        // Завершаем механизм обхода, получения 'id', перетянутого значка на карту. В зависимости от того, как он был перетянут, из балуна первичной метки или из блока слева, вверху над картой.
+
                         // Создаем метку и добавляем ее на карту.
                         if(markers.length < 100)
 			            {
@@ -337,6 +402,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                          // После добавления первой метки нового маршрута, делаем видимыми значки машинки и самолетика, в блоке '.span12' вверху над картой.
                          $(".span12").css({'opacity' : '1'});
+                         //$(".span12 img").css({'width' : '45px'});
                          //$(".span12".css("opacity", "1"));
 
                          // Если строится автомаршрут, перетягиванием метки из тулбара, то добавляем его точки в массив markers.
