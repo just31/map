@@ -573,8 +573,8 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                          {
                            //placemark.options.set('visible', true);
                            // Открываем балун второй метки авимаршрута. С информацией о ее местонахождении и информацией о том как продожить или удалить маршрут.
-                           //myMap.balloon.open(coord_aero_main, {contentBody: "<b style='color: #ddb505; font-size: 14px;'>Точка маршрута:</b><br /> <i style='font-size: 13px;'>" + closestObject_1.getData().properties.get('balloonContent') + "</i><br /><small><i style='color: #999966; font-size: 14px;'>Щелкните по метке, чтобы продолжить или удалить авиамаршрут.</small></i><br />"});
-                           myMap.balloon.open(coord_aero_main, {contentBody: "<small><b style='color: #999966; font-size: 13px;'>Щелкните по метке, чтобы продолжить<br /> или удалить авиамаршрут.</small></b><br />"});
+                           myMap.balloon.open(coord_aero_main, {contentBody: "<b style='color: #ddb505; font-size: 14px;'>Местонахождение:</b><br /> <i style='font-size: 13px;'>" + closestObject_1.getData().properties.get('balloonContent') + "</i><br /><small><b style='color: #999966; font-size: 13px;'>Щелкните по метке, чтобы продолжить или удалить авиамаршрут.</small></b><br />"});
+                           //myMap.balloon.open(coord_aero_main, {contentBody: "<small><b style='color: #999966; font-size: 13px;'>Щелкните по метке, чтобы продолжить<br /> или удалить авиамаршрут.</small></b><br />"});
                            //var closestObject_2 = arPlacemarksRez.getClosestTo(coordinates).balloon.open();
                          }
 
@@ -697,7 +697,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                               firstGeoObject_text_avio_first = firstGeoObject_avio.properties.get('text');
                               //console.log('Местонахождение новой точки авиамаршрута: ', firstGeoObject_text_avio_first);
                               // Показываем балун о местонахождении точки по которой кликнули. Только, если к авиамаршруту добавлено более 2 точек.
-                              if(distance_aero.length >= 2){
+                              if(distance_aero.length >= 3){
                                 myMap.balloon.open(coords_vertex, {contentBody: "<b style='color: #ddb505; font-size: 14px;'>Местонахождение:</b><br /> <i style='font-size: 12px;'>" + firstGeoObject_text_avio_first + '</i>'});
                               }
                            });
