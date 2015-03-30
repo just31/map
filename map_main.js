@@ -196,7 +196,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
     // Устанавливаем опции и свойства новой метки.
     // Шаблон вывода хинта метки
-    placemark_new.options.set('hintContentLayout', ymaps.templateLayoutFactory.createClass("<span style='color: #B0BEA4;'>$[properties.hintContent]</span>"));
+    placemark_new.options.set('hintContentLayout', ymaps.templateLayoutFactory.createClass("<span style='color: #444444;'>$[properties.hintContent]</span>"));
     placemark_new.properties.set('hintContent', "Нажмите, чтобы построить маршрут");
 
     // НАЧАЛО ОТСЛЕЖИВАНИЯ КЛИКА ПО БОЛЬШОЙ МЕТКЕ В ЦЕНТРЕ КАРТЫ. С ВЫБОРОМ МАРШРУТИЗАЦИЙ.
@@ -728,6 +728,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         // Убираем открытый балун с карты
                         myMap.balloon.close();
                         // Завершаем удаление всего маршрута, по кнопке "Удалить маршрут".
+
+                        // Показываем ссылку на обновление страницы. Вверху справа над картой.
+                        $(".link-up").css({'display' : 'block'});
                         });
                         });
 
@@ -774,6 +777,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                        // Убираем открытый балун с карты
                        myMap.balloon.close();
                        // Завершаем удаление всего маршрута, по кнопке "Удалить маршрут".
+
+                       // Показываем ссылку на обновление страницы. Вверху справа над картой.
+                       $(".link-up").css({'display' : 'block'});
                      });
 
                 });
@@ -971,6 +977,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                        // Убираем открытый балун с карты
                        myMap.balloon.close();
                        // Завершаем удаление всего маршрута, по кнопке "Удалить маршрут".
+
+                       // Показываем ссылку на обновление страницы. Вверху справа над картой.
+                       $(".link-up").css({'display' : 'block'});
                      });
 
                   });
@@ -1714,16 +1723,32 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                    //console.log($('#icon01'));
 
                    //myMap.balloon.open(coords_location, {contentBody: '<div><i style="color: #99490E; font-size: 18px;">Для вычисления углеродного следа:</i><br />Щелкните по метке машинки. Или перетяните значок самолетика из блока сверху над картой. В то место откуда Вы хотите начать маршрут.</div><br /><div style="text-align: center; margin-top: -4px; background-color: #F5F5F5;"><a href="#" id="switch_close"><img class="icon" id="icon01" width="45px" title="Щелкните для построения маршрута" src="/f/min/images/car.png" draggable="true" /></a></div>'});
-                   myMap.balloon.open(coords_location, {contentBody: '<div><i style="color: #99490E; font-size: 18px;">Для вычисления углеродного следа:</i><br />Щелкните по метке машинки, установите первую точку маршрута на карте.</div><br /><div style="text-align: center; margin-top: -4px; background-color: #F5F5F5;"><a href="#" id="route_auto"><img class="icon" id="icon01" width="45px" title="Щелкните для построения автомаршрута" src="/f/min/images/car.png" draggable="true" /></a></div>'});
+                   myMap.balloon.open(coords_location, {contentBody: '<div><i style="color: #99490E; font-size: 18px;">Для вычисления углеродного следа:</i><br />Щелкните по метке самолетика, установите первую точку маршрута на карте.</div><br /><div style="text-align: center; margin-top: -4px; background-color: #F5F5F5;"><a href="#" id="route_avia"><img class="icon" id="icon01" width="45px" title="Щелкните для построения авиамаршрута" src="/f/min/images/airplane.png" draggable="true" /></a></div>'});
 
                    // После открытия балуна метки с пояснениями, делаем видимым значок самолетика, в блоке '.span12' вверху над картой.
                    $(".span12").css({'opacity' : '1'});
 
-                   $('#route_auto').click(function () {
+                   $('#route_avia').click(function () {
                      //console.log("Клик по машинке произошел.");
 
-                     // Раскомментировать(вместе с функцией document.onmousemove = function (e) {..}), если необходимо, чтобы метка машинки бегала за курсором. Закомментировать последующую строку $(".pointerImg").css({'opacity' : '0'}); .
-                     $(".pointerImg").css({'opacity' : '1'});
+                     // Механизм движения за курсором, значка машинки. Через свойство перемещания курсора мышки 'onmousemove', в любом направлении экрана.
+                     document.onmousemove = function (e) {
+                     var x = (e = e || event).clientX;
+                     var y = e.clientY;
+                     // ПОЛУЧАЕМ ОБЪЕКТ МАШИНКИ, КОТОРЫЙ БУДЕТ ДВИГАТЬСЯ ЗА КУРСОРОМ.
+                     var obj = this.getElementById('mouseImg1');
+                     if (obj && (obj = obj.style)) {
+                       // Делаем отступ в 5px, слева, у картинки тянущейся за курсором.
+                       obj.left = x + 5 + 'px';
+                       //console.log('Положение по оси x', obj.left);
+                       // Делаем отступ в 5px, сверху, у картинки тянущейся за курсором.
+                       obj.top = y + 5 + 'px';
+                     }
+                     //self.e.cancelBubble=true;
+                     };
+
+                     // Раскомментировать(вместе с функцией document.onmousemove = function (e) {..}), если необходимо, чтобы метка самолетика бегала за курсором. Закомментировать последующую строку $(".pointerImg").css({'opacity' : '0'}); .
+                     $(".pointerImg1").css({'opacity' : '1'});
                      //$(".pointerImg").css({'opacity' : '0'});
                      // Устанавливаем блоку, с тянущейся за курсором картинкой, смещение сверху в 30px.
                      //$(".pointerImg").offset({top: 30px});
@@ -1754,6 +1779,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                    // Координаты местопложения пользователя. По ним будем добавлять точку на карту.
                    var coords_location = [geolocation.latitude, geolocation.longitude];
                    myMap.setCenter(coords_location, 8);
+
+                   // Показываем ссылку на обновление страницы. Вверху справа над картой.
+                   $(".link-up").css({'display' : 'block'});
                    }
                  });
                return editorItems;
