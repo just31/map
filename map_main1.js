@@ -5,20 +5,6 @@
 define('map_main1', ['jquery', 'als'], function ($, als) {
   'use strict';
 
-  document.addEventListener('DOMContentLoaded', function() {
-    var toolbar = document.getElementById('toolbar'),
-        iframe = toolbar && toolbar.firstElementChild;
-    if (iframe && /beeline/.test(iframe.getAttribute('src'))) {
-        toolbar.parentNode.removeChild(toolbar);
-    }
-  });
-  setTimeout(function() {
-    var script = document.querySelector('script[name=ets-anchor]');
-    if (script) {
-        script.parentNode.removeChild(script);
-    }
-  }, 0);
-
   /**
    * Yandex map with placemarks
    * by default being positioned at the center of Moscow
@@ -30,7 +16,7 @@ define('map_main1', ['jquery', 'als'], function ($, als) {
    * @param {Array} [options.placemarks]
    * @constructor
    */
-  function Map (root) {  // !!!!
+function Map (root) {  // !!!!
     var defaults = {
       coords: [{ lat: 55.752078, lng:37.621147 }],
       map_center: [37.621147, 55.752198],
@@ -55,971 +41,892 @@ define('map_main1', ['jquery', 'als'], function ($, als) {
       yMaps.resolve();
     };
     yMaps.done(arguments);
-    require(['//api-maps.yandex.ru/2.0.39/?load=package.full&lang=ru-RU&onload=yandexMapsLoaded']);
+    require(['//api-maps.yandex.ru/2.1.22/?load=package.full&lang=ru-RU&onload=yandexMapsLoaded']);
     require(['//yandex.st/jquery/2.1.1/jquery.min.js']);
-    require(['http://webmap-blog.ru/examples/add-users-ymapsapi2/js/bootstrap.min.js']);
-    require(['http://intranet.russiancarbon.org/f/min/drag-scroll-behavior.js']);
-    // Сделаем броузеры ES5 friendly текущему.
-    require(['http://intranet.russiancarbon.org/f/min/es5-shim.js']);
-    // Файлы для множественного геокодирования координат в адреса. Нужны для геокодирования массивов с точками автомаршрута, первого вида маршрутизации.
-    require(['http://intranet.russiancarbon.org/f/min/multi-geocoder.js']);
-    require(['http://dimik.github.io/ymaps/examples/multi-geocoder/list-collection.js']);
+    require(['http://dimik.github.io/ymaps/examples/migration/1.x-2.0/user-layer/tiler-converter.js']);
   };
 
-  Map.prototype.createMap = function () {
-
-    var route, icon, distance, myGeoObject, placemark, visibleObjects, mGeocoder, geoObjects_coll, firstGeoObject_1, ballon_aero, result, ch = 1;
-	var markers = [];
-    var markers_1 = [];
-	var point = [];
-    var geo_points = [];
-    var point_geo = [];
-    var distance_aero = [];
-    var point_aero = [];
-    var myCollection;
-    // делаем переменную myCollection, глобальной, чтобы можно было ее значение передавать из ajaх запроса. При получении списка аэропортов из aero1.csv.
-    window.globalvar = myCollection;
-    // создаем глобальную переменную для GeoQueryResult, со списком аэропортов.
-    var arPlacemarksRez;
-    window.globalvar = arPlacemarksRez;
-    var i,
-      el = this.root.get(0);
-
-    this.yMap = new ymaps.Map(
-      el,
-      {
-        center: this.coords,
-        zoom: 8,
-        type: 'yandex#map'
-      }
-    ),
-    button = $('#editor'),
-    button1 = $('#delete'),
-    button2 = $('#editor1'),
-    button3 = $('#delete1'),
-    // DOM-контейнер карты. Начало функционала перетаскивания картинок из тулбара, на карту. Продолжение функционала перетаскивания, начинается ниже в коде со строки: ymaps.behavior.storage.add('dragScroll', DragScrollBehavior);
-    // После определения myMap и добавления геоколлекции аэропортов на карту.
-    $mapContainer = $(this.yMap.container.getElement());
-
-    // Сохраняем значение this.yMap в переменнную myMap. Чтобы передать ее значение в функции скрипта.
-    // Иначе this.yMap, не будет доступен внутри них.
-    myMap = this.yMap;
-
-    // Изменяем свойство поведения с помощью опции:
-    // изменение масштаба колесом прокрутки будет происходить медленно,
-    // на 1/2 уровня масштабирования в секунду.
-    // myMap.options.set('scrollZoomSpeed', 0.5);
-
-    // Добавляем геоколллекцию меток аэропортов на карту
-    // Создание пустой геоколллекции myCollection, для добавления в нее списка аэропортов из файла aero3.csv.
-    myCollection = new ymaps.GeoObjectCollection();
-    /*
-    // список аэропортов России
-    var path = 'http://intranet.russiancarbon.org/f/min/aero1.csv';
-    */
-    // список аэропортов Мира
-    var path = 'http://intranet.russiancarbon.org/f/min/map/aero3.csv';
-    // Запрос cvs файла со списком аэропортов
-     $.ajax({
-	    url:path,
-        async: false,
-	    success: function(data){
-        var rows = data.split("\n");
-		for(var j in rows){
-		  var colls=rows[j].split(";");//или другой символ разделитель
-          // Проверяем первое значение массива colls: colls[0]. Если оно не пустое выводим его в балуне(русское название аэропорта). Если нет, выводим второе значение colls[1], с английским названием.
-          if((colls[0] === ''))
-          {
-           ballon_aero = colls[1];
-          }
-          else
-          {
-           ballon_aero = colls[0];
-          }
-          // Устанавливаем координаты и содержимое балуна
-          // если список аэропортов России, координаты:
-          //var myPlacemark_1 = new ymaps.Placemark([colls[3], colls[4]],
-          // если список аэропортов Мира, координаты:
-          myPlacemark_1 = new ymaps.Placemark([colls[4], colls[5]], {
-          // Свойства
-          "balloonContent": 'Аэропорт: '+ ballon_aero
-          }, {
-          // Опции
-          preset: 'twirl#airplaneIcon',
-          visible: false
-          });
-          //if(markers_1.length === 0 ) {
-          myCollection.add(myPlacemark_1);
-          //}
-        }
-        }
-	 });
-
-     // создание GeoQueryResult, со списком аэропортов. Для нахождения ближайшего к выбранной точке.
-     arPlacemarksRez = ymaps.geoQuery(myCollection);
-     // Найдем объекты(аэропорты), попадающие в видимую область карты.
-     arPlacemarksRez.searchInside(myMap)
-     // И затем добавим найденные объекты на карту. Делаем их невидимыми.
-     .addToMap(myMap).setOptions('visible', false);
-
-     myMap.events.add('boundschange', function () {
-       // После каждого сдвига карты будем смотреть, какие объекты попадают в видимую область. Делаем их невидимыми.
-       visibleObjects = arPlacemarksRez.searchInside(myMap).addToMap(myMap).setOptions('visible', false);
-       // Оставшиеся объекты будем удалять с карты.
-       arPlacemarksRez.remove(visibleObjects).removeFromMap(myMap);
-     });
-
-
-    // Продолжение функционала перетаскивания картинок из тулбара, на карту
-    // Добавляем поведение в хранилище.
-    ymaps.behavior.storage.add('dragScroll', DragScrollBehavior);
-    // Включаем скролл карты при перетаскивании.
-    this.yMap.behaviors.enable('dragScroll');
-
-    /**
-    * Добавим свойство dataTransfer в объект-событие,
-    * чтобы не доставать его каждый раз из e.originalEvent.
-    */
-    $.event.props.push('dataTransfer');
-
-    $('.icon').on('dragstart', function (e) {
-                    // Будем перетаскивать в режиме копирования (броузер добавит "+" при перетаскивании)
-                    e.dataTransfer.effectAllowed = 'copy';
-                    // Кладем в данные идентификатор метки.
-                    e.dataTransfer.setData('TEXT', this.id);
-                    // Перетаскиваем за хвостик иконки
-                    // и сделаем ее прозрачной если это не FF.
-                    if(typeof e.dataTransfer.setDragImage === 'function') {
-                        var dragIcon = $.browser.mozilla || $.browser.opera ? this :
-                            $(this).clone().css('opacity', '0.3').get(0);
-
-                        e.dataTransfer.setDragImage(dragIcon, this.width / 2, this.height);
-                    }
-    });
-
-    // Создаем метку.
-                function createPlacemark(coordinates, options) {
-                    placemark = new ymaps.Placemark(coordinates);
-
-                    placemark.options.set(options);
-                    // Геокодируем координаты метки.
-                    geocodePlacemark(placemark);
-
-                    placemark.events
-                        // По окончании перетаскивания геокодируем координаты метки.
-                        .add('dragend', function (e) {
-                            geocodePlacemark(placemark);
-                        })
-                        // При открытии балуна выключаем перетаскивание.
-                        .add('balloonopen', function (e) {
-                            placemark.options.set('draggable', false);
-                        });
-
-                    return placemark;
-    }
-
-    $mapContainer.on('dragover', function (e) {
-                        // Эта инструкция разрешает перетаскивание.
-                        e.preventDefault();
-                        // dropEffect должен совпадать с effectAllowed.
-                        e.dataTransfer.dropEffect = 'copy';
-                    })
-                    .on('drop', function (e) {
-                        // не работает в FF =) поэтому делаем return false вконце
-                        // e.stopPropagation();
-
-                        // Находим DOM-элемент иконки по идентификатору из данных.
-                        icon = $('#' + e.dataTransfer.getData('TEXT')),
-                            // Размеры иконки.
-                            width = icon.width(), height = icon.height(),
-                            // Геокоординаты метки.
-                            coordinates = pageToGeo([e.originalEvent.pageX, e.originalEvent.pageY]),
-                            // Объект опций метки.
-                            options = {
-                                iconImageHref: icon.attr('src'),
-                                iconImageSize: [width, height],
-                                iconImageOffset: [-(width / 2), -height],
-                                draggable: true,
-                                'visible': true
-                            };
-
-                        // Создаем метку и добавляем ее на карту.
-                        if(markers_1.length < 100)
-			            {
-                         // добавляем основную метку на карту
-                         myMap.geoObjects.add(createPlacemark(coordinates, options));
-                         // делаем ее видимой
-                         placemark.options.set('visible', true);
-                         // если выбран значок самолета, подгружаем список аэропортов
-                         if (placemark.options.get('iconImageHref') == '/f/min/images/airplane.png'){
-                         // добавляем геоколлекцию меток аэропортов из файла aero1.csv, на карту
-                         //myMap.geoObjects.add(myCollection);
-                         /*
-                         // Создание GeoQueryResult, со списком аэропортов, из файла data_aero1.js.
-                         $.ajax({
-                           url: "http://intranet.russiancarbon.org/f/min/data_aero1.js",
-                           dataType: "script",
-                           async: false,
-                         });
-
-                         // добавляем данные аэропортов из массива objects1, делаем его невидимым
-                         var arPlacemarksRez = ymaps.geoQuery(objects1).addToMap(myMap).setOptions('visible', false);
-                         */
-
-                         // находим ближайший объект(аэропорт) из геоколлекции myCollection. К выбранной точке.
-                         var closestObject = arPlacemarksRez.getClosestTo(coordinates);
-                         //открываем балун с названием ближайшего к выбранной точке, аэропорта.
-                         var closestObject_1 = arPlacemarksRez.getClosestTo(coordinates).balloon.open();
-
-                         // получаем координаты ближ. аэропорта. Записываем их в массив coord_aero.
-                         var coord_aero = 0;
-                         coord_aero = closestObject.geometry.getCoordinates();
-                         // получаем отд. строковые значения широты и долготы точки аэропорта и приводим их к числовому значению.
-                         var coord_aero_lat = coord_aero[0] - 0;
-                         // альтернативный вариант преобразования строки в число. Таким же образом можно преобразовать и значение долготы точки coord_aero_lon.
-                         //var coord_aero_lat = Number(coord_aero[0]);
-                         var coord_aero_lon = coord_aero[1] - 0;
-                         // помещаем оба значения в массив coord_aero_main, для использования его в геокодировании найденной точки аэропорта.
-                         var coord_aero_main = [coord_aero_lat, coord_aero_lon];
-
-                         // удаляем основную метку, добавленную выше myMap.geoObjects.add(createPlacemark(coordinates, options));. Чтобы заменить ее новой по координатам найденного аэропорта.
-                         myMap.geoObjects.remove(placemark);
-
-                         // устанавливаем приближение карты, равное 5.
-                         myMap.setZoom(5);
-                         // добавляем новую метку на карту, с координатами ближайшего аэропорта.
-                         myMap.geoObjects.add(createPlacemark(coord_aero_main, options));
-                         // делаем ее видимой
-                         placemark.options.set('visible', true);
-                         // добавляем выбранные точки в массив distance_aero
-                         distance_aero.push(placemark);
-                         for(var i = 0, l = distance_aero.length; i < l; i++) {
-                            // получаем их координаты, для дальнейшего использования в построении ломаной авиамаршрута
-			            	point_aero[i] = distance_aero[i].geometry.getCoordinates();
-			             }
-                         // console.log('init object', point_aero);
-
-                         // в балуне показываем координаты новой метки
-                         ymaps.geocode(coord_aero_main).then(function (res) {
-                           firstGeoObject_1 = res.geoObjects.get(0);
-                           var firstGeoObject_text_1 = firstGeoObject_1.properties.get('text');
-                           // собираем информацию о точках авиамаршрута, добавленного по картинкам из тулбара.
-                           // добавляем текстовую информацию(firstGeoObject_1.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
-                           geo_points.push(firstGeoObject_text_1);
-                           // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
-                           for(var i = 0, l = geo_points.length; i < l; i++) {
-                             // два варианта нахождения последнего символа, в строке описания каждой точки маршрута
-                             // var point_geo_l = geo_points[i].slice(0, -1);
-                             // var point_geo_l = geo_points[i].substring(0, geo_points[i].length - 1);
-
-				             point_geo[i] = '<br />&bull; ' + geo_points[i];
-                             //console.log('init object', point_geo[i]);
-                             //console.log('init object', geo_points);
-			               }
-                           //placemark.properties.set('balloonContentBody', firstGeoObject_text_1);
-                           placemark.properties
-                           .set({
-                             balloonContent: firstGeoObject_text_1
-                           });
-                         });
-                         //placemark.properties.set('balloonContentBody', coord_aero);
-                         }
-                         // добавляем новые метки по всем маршрутам в массив markers_1.
-                         markers_1.push(placemark);
-                         // Выключаем скролл карты при перетаскивании.
-                         ymaps.behavior.storage.remove('dragScroll', DragScrollBehavior);
-                         myMap.behaviors.disable('dragScroll');
-                         }
-                         else
-			             {
-			               alert("Вы задали максимальное количество точек");
-			             }
-
-                         return false;
-
-    });
-                // Геокодирование координат метки.
-                function geocodePlacemark(placemark) {
-                    ymaps.geocode(placemark.geometry.getCoordinates(), { results: 1 })
-                        .then(function (res) {
-                            var first = res.geoObjects.get(0),
-                                text = first.properties.get('text');
-
-                                // если выбран не авиамаршрут, собираем информацию о всех точках автомаршрута, добавленного по картинкам из тулбара.
-                                if (placemark.options.get('iconImageHref') != '/f/min/images/airplane.png'){
-                                // добавляем текстовую информацию(text.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
-                                geo_points.push(text);
-                                // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
-                                for(var i = 0, l = geo_points.length; i < l; i++) {
-			                    point_geo[i] = '<br />&bull; ' + geo_points[i];
-                                //console.log('init object', point_geo);
-                                }
-                                }
-                            // Выставляем содержимое балуна метки.
-                            placemark.properties.set('balloonContentBody', text);
-                        });
-                }
-                // Преобразуем пиксельные координаты позиции иконки на странице в геокоординаты.
-                function pageToGeo(coords) {
-                    var projection = myMap.options.get('projection');
-
-                    return projection.fromGlobalPixels(
-                        myMap.converter.pageToGlobal(coords), myMap.getZoom()
-                    );
-    }
-    // Завершение функционала перетаскивания картинок на карту.
-
-
-    //Определяем элемент управления поиск адреса по карте
-	var SearchControl = new ymaps.control.SearchControl({
-    noPlacemark:true,
-    data: {},
-    options: {
-        maxWidth: ['small'],
-        float: "right"
-    }
-    });
-
-    //Добавляем элементы управления
-   	this.yMap.controls.add("zoomControl").add("typeSelector").add(SearchControl, { left: '150px', top: '5px' });
-    //Отключаем функции: изменения масштаба карты колесиком мышки. И масштабирования карты при выделении области правой кнопкой мыши.
-    this.yMap.behaviors.disable(['scrollZoom', 'rightMouseButtonMagnifier']);
-
-
-    //вывод в цикле меток на карту
-    for (i = 0; i < this.coords.length; i++) {
-      this.createPlacemark(this.coords[i]);
-    }
-
-    //Устанавливаем границы карты, охватывающие все геообъекты на ней.
-    this.yMap.setBounds(this.yMap.geoObjects.getBounds());
-
-    // предельный zoom(приближение).
-    if (this.yMap.getZoom() >= 8) {
-      this.yMap.setZoom(8);
-    }
-
-	//Отслеживаем событие клика по карте
-		this.yMap.events.add('click', function (e) {
-            var position = e.get('coordPosition');
-			if(markers.length < 100)
-			{
-             myPlacemark = new ymaps.Placemark([position[0].toPrecision(6), position[1].toPrecision(6)], {
-                    // Свойства
-                    // Текст метки
-                    iconContent: ch
-                }, {
-                    // Опции
-                    // Иконка метки будет растягиваться под ее контент
-                    preset: 'twirl#carIcon',
-                    // Метку можно перемещать.
-                    draggable: true
-                });
-
-			 markers.push(myPlacemark);
-			 this.yMap.geoObjects.add(myPlacemark);
-			 ch++;
-			 }
-			 else
-			 {
-			 alert("Вы задали максимальное количество точек");
-			 }
-
-             // Отправим запрос на геокодирование добавленной метки. Геокодирование координат полученной метки, в полный адрес. Его вывод в балуне метки.
-             ymaps.geocode(position).then(function (res) {
-             var firstGeoObject = res.geoObjects.get(0);
-             var firstGeoObject_text = firstGeoObject.properties.get('text');
-             // собираем информацию о всех точках автомаршрута, добавленного несколькими кликами по карте.
-             // добавляем текстовую информацию(firstGeoObject_text.properties.get('text')), о всех точках маршрута в массив geo_points. Для вывода их в блоке общей информации по маршруту, на странице /map/.
-             geo_points.push(firstGeoObject_text);
-             // перебираем информацию по каждой отдельной точке и присваиваем ее индексу point_geo[i]. Далее используя point_geo, выводим информацию по каждой точке маршрута, в блоке "Все точки авиамаршрута:".
-             for(var i = 0, l = geo_points.length; i < l; i++) {
-			 point_geo[i] = '<br /> &bull; ' + geo_points[i];
-             //console.log('init object', point_geo);
-			 }
-             myPlacemark.properties.set('balloonContentBody', firstGeoObject_text);
-             });
-    }, this);
-
-    //Прокладываем маршрут по отмеченным точкам(Вариант1):
-    button.click(function () {
-		for(var i = 0, l = markers.length; i < l; i++) {
-				point[i] = markers[i].geometry.getCoordinates();
-			}
-            ymaps.route(point, {
-                // Опции маршрутизатора
-                avoidTrafficJams: true, // строить маршрут с учетом пробок
-                mapStateAutoApply: true // автоматически позиционировать карту
-            }).then(function (router) {
-
-              route = router;
-              myMap.geoObjects.add(route);
-
-              // С помощью метода getWayPoints() получаем массив точек маршрута
-              var points = route.getWayPoints();
-              points.options.set('visible', false);
-
-              // Множественное геокодирование точек автомаршрута, координат в адреса:
-              mGeocoder = new MultiGeocoder({ boundedBy : myMap.getBounds() });
-              // Геокодирование массива координат.
-              mGeocoder.geocode(point)
-              .then(function (res) {
-              // Асинхронно получаем коллекцию найденных геообъектов.
-              // Перебираем все полученные точки автомаршрута.
-              res.geoObjects.each(function (geoObject) {
-                // Находим и устанавливаем свойство значка для маршрута, ввиде машинки.
-                geoObject.options.set('preset', 'twirl#carIcon');
-              });
-              // Добавляем полученную коллекцию геокодированных точек маршрута, на карту.
-              myMap.geoObjects.add(res.geoObjects);
-              // Присваиваем полученную коллекцию, переменной - geoObjects_coll. Для дальнейшего ее использования, при удалении коллекции. По кнопке "Очистить маршрут по картинкам".
-              geoObjects_coll = res.geoObjects;
-              },
-              function (err) {
-                console.log(err);
-              });
-
-              //console.log('init object', mGeocoder);
-
-              // Задаем стиль метки - иконки будут красного цвета, и
-              // их изображения будут растягиваться под контент
-              points.options.set('preset', 'twirl#carIcon');
-              //points.get(0).properties.set('balloonContentBody', 'Точка отправления');
-              //points.get(1).properties.set('balloonContentBody', 'Точка прибытия');
-
-              // Задаем контент меток в начальной и конечной точках
-              //points.get(0).properties.set('iconContent', 'Точка отправления');
-              //points.get(1).properties.set('iconContent', 'Точка прибытия');
-
-              // длина маршрута в м
-              var way_m = route.getLength();
-              // округленная длина маршрута, без цифр, после запятой
-              var way_m_1 = way_m.toFixed(0);
-
-              var way_m_car = (way_m_1 * 2 * 22 * 12)/1000; // получения значения пробега за год. Если маршрут используется для поездок на работу, в км.
-              var way_m_car_1 = way_m_car.toFixed(0); // округление пробега, до 0 цифр после запяфтой.
-
-              var way_m_home = (way_m_1 * 2 * 14)/1000; // получения значения пробега за год. Если маршрут используется для поездок на дачу, в км.
-              var way_m_home_1 = way_m_home.toFixed(0); // округление пробега, до 0 цифр после запяфтой.
-
-              //формула вычисления углеродного следа, при поездке на машине
-              var k_diesel = 0.002322; //количество тонн со2 на 1 кг дизельного топлива
-              var k_gasoline = 0.002664; //количество тонн со2 на 1 кг газового топлива
-
-              var p_diesel = 0.84; //плотность дизельного топлива
-              var p_gasoline = 0.71; //плотность газового топлива
-
-              var a = 10,
-              b = way_m_1;
-
-              var m_diesel = (b/100*a)*p_diesel; //масса дизельного топлива
-              var m_gasoline = (b/100*a)*p_gasoline; //масса газового топлива
-
-              var co_auto_diesel = m_diesel*k_diesel; //углеродный след, дизельное топливо
-              // округляем значение до одного знака после запятой
-              var co_auto_1_diesel = co_auto_diesel.toFixed(1);
-
-              var co_auto_gasoline = m_gasoline*k_gasoline; //углеродный след, газовое топливо
-              // округляем значение до одного знака после запятой
-              var co_auto_1_gasoline = co_auto_gasoline.toFixed(1);
-
-              $(".route-length1").append('<H2>Автомаршрут:</H2> <strong>');
-              $(".route-length1").append('<h3>Общая длина маршрута: <strong>' + route.getHumanLength()+ '</strong></h3>');
-			  $(".route-length1").append('<h3>Время в пути: <strong>' + route.getHumanTime()+ '</strong></h3>');
-              $(".route-length1").append('<h3>Углеродный след составит:</h3> Если Вы используете дизельное топливо - <strong>' + co_auto_1_diesel + ' кгСО2/л.</strong><br />Если Вы используете бензин - <strong>' + co_auto_1_gasoline + ' кгСО2/л.</strong><br /><br />');
-
-              $(".route-length1").append('Если указанный маршрут используется для поездок на работу, то за год вы проедете примерно: <strong>' + way_m_car_1 + ' км</strong><br />');
-              $(".route-length1").append('Если указанный маршрут используется для поездок на дачу, то в дачный сезон вы проедете примерно: <strong>' + way_m_home_1 + ' км</strong><br /><br />');
-              $(".route-length2").append('<h3>Все точки автомаршрута: <div style="margin: -20px 0 0 15px;"><strong>' + point_geo + '.</strong></div></h3>');
-
-            }, function (error) {
-                alert("Возникла ошибка: " + error.message);
-            }, this);
-   }
-   );
-
-   //Удаление маршрута, геокодированной коллекции координат и добавленных меток, с карты и очистка данных.
-        button1.click(function () {
-         route && myMap.geoObjects.remove(route);
-		 for(var i = 0, l = markers.length; i < l; i++) {
-		     myMap.geoObjects.remove(markers[i]);
-		 }
-         // обнуляем переменную счетчик меток и массивы.
-		 markers = [];
-		 point = [];
-         geo_points = [];
-         point_geo = [];
-		 ch = 1;
-         // очищаем блок с данными построенного маршрута.
-         $(".route-length1").empty();
-         // очищаем блок с данными о всех точках перелета, по авиамаршруту.
-         $(".route-length2").empty();
-         //console.log('init object', mGeocoder);
-
-         // Создаем механизм удаления геокодированной выше, коллекции координат автомаршрута.
-         // создаем новую коллекцию ymaps.GeoObjectCollection, добавляем ее на карту.
-         var collection = new ymaps.GeoObjectCollection();
-         myMap.geoObjects.add(collection);
-         // заполняем ее метками из геокодированной коллекции geoObjects_coll.
-         collection.add(geoObjects_coll);
-         //делаем этой коллекции removeAll(). Т.е. удаляем все объекты с карты, при клике по кнопке "Очистить маршрут по картинкам".
-         collection.removeAll();
-
-         // устанавливаем после удаления маршрута, новый центр и zoom карты
-         myMap.setCenter([55.752078, 37.621147], 8);
-   });
-
-   //Прокладываем маршрут по перемещенным из тулбрара меткам(Вариант2):
-   button2.click(function () {
-		for(var i = 0, l = markers_1.length; i < l; i++) {
-				point[i] = markers_1[i].geometry.getCoordinates();
-			}
-
-            ymaps.route(point, {
-                // Опции маршрутизатора
-                avoidTrafficJams: true, // строить маршрут с учетом пробок
-                mapStateAutoApply: true // автоматически позиционировать карту
-            }).then(function (router) {
-
-            route = router;
-            route.options.set({ strokeStyle: 'solid'});
-
-             // длина маршрута в м
-             var way_m = route.getLength();
-             // округленная длина маршрута, без цифр, после запятой
-             var way_m_1 = way_m.toFixed(0);
-
-             var way_m_car = (way_m_1 * 2 * 22 * 12)/1000; // получения значения пробега за год. Если маршрут используется для поездок на работу, в км.
-             var way_m_car_1 = way_m_car.toFixed(0); // округление пробега, до 0 цифр после запяфтой.
-
-             var way_m_home = (way_m_1 * 2 * 14)/1000; // получения значения пробега за год. Если маршрут используется для поездок на дачу, в км.
-             var way_m_home_1 = way_m_home.toFixed(0); // округление пробега, до 0 цифр после запяфтой.
-
-             //Сортировка маршрутов по выбранным картинкам(самолет, машинка, дом)
-             //если выбраны картинки: машинки или домика
-             //прокладываем обычный маршрут по дорогам
-             if (placemark.options.get('iconImageHref') == '/f/min/images/car.png' || placemark.options.get('iconImageHref') == '/f/min/images/house.png'){
-              myMap.geoObjects.add(route);
-
-              // С помощью метода getWayPoints() получаем массив точек маршрута
-              var points = route.getWayPoints();
-              points.options.set('visible', false);
-
-              //console.log('init object', points);
-
-              // Задаем стиль метки - иконки будут красного цвета, и
-              // их изображения будут растягиваться под контент
-              points.options.set('preset', 'twirl#carIcon');
-              // Задаем контент меток в начальной и конечной точках
-              //points.get(0).properties.set('iconContent', 'Точка отправления');
-              //points.get(1).properties.set('iconContent', 'Точка прибытия');
-
-              //формула вычисления углеродного следа, при поездке на машине
-              var k_diesel = 0.002322; //количество тонн со2 на 1 кг дизельного топлива
-              var k_gasoline = 0.002664; //количество тонн со2 на 1 кг газового топлива
-
-              var p_diesel = 0.84; //плотность дизельного топлива
-              var p_gasoline = 0.71; //плотность газового топлива
-
-              var a = 10,
-              b = way_m_1;
-
-              var m_diesel = (b/100*a)*p_diesel; //масса дизельного топлива
-              var m_gasoline = (b/100*a)*p_gasoline; //масса газового топлива
-
-              var co_auto_diesel = m_diesel*k_diesel; //углеродный след, дизельное топливо
-              // округляем значение до одного знака после запятой
-              var co_auto_1_diesel = co_auto_diesel.toFixed(1);
-
-              var co_auto_gasoline = m_gasoline*k_gasoline; //углеродный след, газовое топливо
-              // округляем значение до одного знака после запятой
-              var co_auto_1_gasoline = co_auto_gasoline.toFixed(1);
-
-              //$(".route-length1").append('В качестве конечной метки, выбрана картинка машинки. <strong><br /><br />');
-              $(".route-length1").append('<H2>Автомаршрут:</H2> <strong>');
-              $(".route-length1").append('<h3>Общая длина маршрута: <strong>' + route.getHumanLength()+ '</strong></h3>');
-			  $(".route-length1").append('<h3>Время в пути: <strong>' + route.getHumanTime()+ '</strong></h3>');
-              $(".route-length1").append('<h3>Углеродный след составит:</h3> Если Вы используете дизельное топливо - <strong>' + co_auto_1_diesel + ' кгСО2/л.</strong><br />Если Вы используете бензин - <strong>' + co_auto_1_gasoline + ' кгСО2/л.</strong><br /><br />');
-
-              $(".route-length1").append('Если указанный маршрут используется для поездок на работу, то за год вы проедете примерно: <strong>' + way_m_car_1 + ' км</strong><br />');
-              $(".route-length1").append('Если указанный маршрут используется для поездок на дачу, то в дачный сезон вы проедете примерно: <strong>' + way_m_home_1 + ' км</strong><br /><br />');
-              $(".route-length2").append('<h3>Все точки автомаршрута: <div style="margin: -20px 0 0 15px;"><strong>' + point_geo + '.</strong></div></h3>');
-             }
-
-             //если выбрана картинка самолета
-             // прокладываем авиамаршрут с помощью ломаной(прямой)
-             if (placemark.options.get('iconImageHref') == '/f/min/images/airplane.png'){
-
-              // Создаем ломаную(прямую), используя класс GeoObject. Для графического отображения линии авиамаршрута на карте. По полученным ранее координатам point_aero, при перетаскивании меток самолетиков на карту.
-              myGeoObject = new ymaps.GeoObject({
-              // Описываем геометрию геообъекта.
-              geometry: {
-                // Тип геометрии - "Ломаная линия".
-                type: "LineString",
-                // Указываем координаты вершин ломаной.
-                coordinates: point_aero
-                /*
-                [
-                    point_1,
-                    point_2,
-                    point_3,
-                    point_4,
-                    point_5
-                ]
-                */
-              },
-              // Описываем свойства геообъекта.
-              properties:{
-                // Содержимое балуна.
-                balloonContent: 'Авиамаршрут, общее расстояния: '+ distance_main +' км'
-             }
-             }, {
-            // Задаем опции геообъекта.
-            // Выключаем возможность перетаскивания ломаной.
-            draggable: false,
-            // Цвет линии.
-            strokeColor: "#336699",
-            // Ширина линии.
-            strokeWidth: 5,
-            }
-            );
-            // Добавляем линию авиамаршрута на карту.
-            myMap.geoObjects.add(myGeoObject);
-
-            // создаем механизм получения длины всей ломаной маршрута
-            // узнаем тип системы координат
-            var coordSystem = myMap.options.get('projection').getCoordSystem(),
-            distance_aero = 0;
-            // вычисляем общую длину ломаной, через кол-во ее точек
-            for (var i = 0, k = myGeoObject.geometry.getLength() - 1; i < k; i++) {
-              distance_aero += Math.round(coordSystem.getDistance(point_aero[i], point_aero[i + 1]))/1000;
-            }
-
-            //console.log(distance_aero.toFixed(0) + "км");
-
-            // Удаление геоколлекции аэропортов(myCollection) с карты.
-            //myMap.geoObjects.remove(myCollection);
-
-            // Устанавливаем центр и масштаб карты так, чтобы отобразить всю прямую авиамаршрута целиком. Устанавливаем на карте границы линии авиамаршрута.
-            myMap.setBounds(myGeoObject.geometry.getBounds());
-
-             //var distance1;
-             //var distance2;
-             //var distance3;
-
-             // получаем координаты первой точки авиамаршрута.
-             var point_1 = point[0];
-
-             // получаем значения широты и долготоы первой точки. Оставляем 4 знака после запятой в них.
-             var point_1_lat = point[0][0];
-             //var point_1_lat = point_1_lat_m.toFixed(4);
-             var point_1_lon = point[0][1];
-             //var point_1_lon = point_1_lon_m.toFixed(4);
-             //console.log('init object', point_1_lon);
-
-             // получаем координаты второй точки авиамаршрута.
-             var point_2 = point[1];
-
-             // получаем значения широты и долготоы второй точки. Оставляем 4 знака после запятой в них.
-             var point_2_lat = point[1][0];
-             //var point_2_lat = point_2_lat_m.toFixed(4);
-             var point_2_lon = point[1][1];
-             //var point_2_lon = point_2_lon_m.toFixed(4);
-
-             // функция split разбиения строки, по разделителю ', '.
-             //var point_1_1 = point_1.split(', ');
-             //console.log('init object', point_1_1);
-
-             // получаем координаты промежуточных точек для постройки авиамаршрута
-             // получаем координаты третьей точки
-             var point_3 = point[2];
-             // если координаты получены, присваиваем их
-             if((typeof point_3 != "undefined")) {
-                point_3 = point[2];
-                //point_2 = point_3;
-                distance1 = Math.round(ymaps.coordSystem.geo.getDistance(point_2, point_3) / 1000);
-             }
-             else // если нет, присваиваем координаты предыдущей точки.
-             {
-                point_3 = point[1];
-                distance1 = 0;
-             }
-
-             // то же самое делаем по двум другим промежуточным точкам ломаной авиамаршрута
-
-             var point_4 = point[3];
-             // если координаты получены, присваиваем их
-             if((typeof point_4 != "undefined")) {
-                point_4 = point[3];
-                //point_2 = point_4;
-                distance2 = Math.round(ymaps.coordSystem.geo.getDistance(point_3, point_4) / 1000);
-             }
-             else // если нет, присваиваем координаты предыдущей точки.
-             {
-                point_4 = point[1];
-                distance2 = 0;
-             }
-
-             var point_5 = point[4];
-             // если координаты получены, присваиваем их
-             if((typeof point_5 != "undefined")) {
-                point_5 = point[4];
-                //point_2 = point_5;
-                distance3 = Math.round(ymaps.coordSystem.geo.getDistance(point_4, point_5) / 1000);
-             }
-             else // если нет, присваиваем координаты предыдущей точки.
-             {
-                point_5 = point[1];
-                distance3 = 0;
-             }
-
-              // перевести координаты в радианы
-              var lat1 = point_1_lat * Math.PI / 180;
-              var lat2 = point_2_lat * Math.PI / 180;
-              var long1 = point_1_lon * Math.PI / 180;
-              var long2 = point_2_lon * Math.PI / 180;
-
-              // косинусы и синусы широт и разницы долгот
-              var cl1 = Math.cos(lat1);
-              var cl2 = Math.cos(lat2);
-              var sl1 = Math.sin(lat1);
-              var sl2 = Math.sin(lat2);
-              var delta = long2 - long1;
-              var cdelta = Math.cos(delta);
-              var sdelta = Math.sin(delta);
-
-              //формула вычисления длины большого круга
-              var y = Math.sqrt(Math.pow(cl2 * sdelta, 2) + Math.pow(cl1 * sl2 - sl1 * cl2 * cdelta, 2));
-              var x = sl1 * sl2 + cl1 * cl2 * cdelta;
-
-              var points_aero_num = myGeoObject.geometry.getLength();
-
-              var ad = Math.atan2(y, x) * points_aero_num;
-
-             // получение расстояния по прямой, между двумя выбранными точками на карте. Можно также использовать, для вычисления расстояния авиаперелета.
-             //var distance_last = point_aero[point_aero.length-1];
-             //console.log('init object', distance_last);
-             //distance = Math.round(ymaps.coordSystem.geo.getDistance(point_aero[0], distance_last) / 1000);
-             //distance = Math.round(ymaps.coordSystem.geo.getDistance(point_1, point_2) / 1000);
-
-             // общее расстояние ломаной авиамаршрута
-             var distance_main = distance_aero.toFixed(0);
-             // var distance_main = distance + distance1 + distance2 + distance3;
-
-              // формула получения расстояния перелета, через вычисление длины большого круга, между двумя выбранными точками на карте. Для авиамаршрута.
-              // расстояние перелета в км,
-              var dist = (ad * 6372795)/1000;
-              var dist_1 = dist.toFixed(0);
-              // расстояние перелета в м, необходимо для вычисления длины углеродного следа.
-              var dist_co = (ad * 6372795);
-              var distance_main_co = (ad * 6372795);
-
-             //формула вычисления углеродного следа, при полете на самолете. Данные:
-             var massa = 22.5; //Удельный вес на пасажира
-             if (dist < 550) {
-             massa = 46.0;
-             } else if (dist < 1500) {
-             massa = 38.2;
-             } else if (dist < 5500) {
-             massa = 23,7;
-             }
-
-             var num_people = 250;
-
-             // основная формула вычисления следа:
-             var co = (((distance_main_co/1000) * massa * 3.157) / 1000000)*1*2.7*num_people;
-             // округляем значение до одной цифры, после запятой.
-             var co_1 = co.toFixed(1);
-
-             //формула перевода часов и десятичных долей часа, в часы, минуты и секунды
-             var nTime = (distance_main/840)+0.5;
-             nTime=Number(nTime);
-	         nTime+=1/7200000;  //коррекция на половинку тысячной секунды
-
-	         var h= Math.floor(nTime);
-	         var mT=(nTime-h)*60;
-	         var m=Math.floor(mT);
-	         var s=((mT-m)*60);
-
-             $(".route-length1").append('<H2>Выбран авиамаршрут</H2> <h3>Расстояние авиаперелета: <strong>' + distance_main + ' км.</strong></h3><small>Расстояние между выбранными точками, производится через вычисление длины большого круга(то есть это расстояние авиаперелета). Оно равно '+ distance_main +' км.</small>');
-             $(".route-length1").append('<h3>Время авиаперелета: <strong>'+ h +'ч. ' + m +' мин.</strong></h3><small>Скорость самолета принята за 840 км/час. Приняты следующие допущения: учтены добавочные 15 минут на взлет и посадку, в среднем маршрут самолета длиннее расчетного на 10%.</small>');
-             $(".route-length1").append('<h3>Длина углеродного следа: <strong>' + co_1 + ' кгСО2</strong> на одного пассажира.</h3><small>При полете на самолете, на выбранную дистанцию ' + distance_main + ' км.</small>');
-             $(".route-length2").append('<h3>Все точки авиамаршрута: <div style="margin: -20px 0 0 15px;"><strong>' + point_geo + '.</strong></div></h3>');
-            }
-            //закончили прокладывание авиамаршрута
-
-            }, function (error) {
-                alert("Возникла ошибка: " + error.message);
-            }, this);
-   }
-   );
-
-   //Удаление маршрута и перемещенных меток, с карты и очистка данных.
-   button3.click(function () {
-         route && myMap.geoObjects.remove(route);
-		 for(var i = 0, l = markers_1.length; i < l; i++) {
-		     myMap.geoObjects.remove(markers_1[i]);
-		 }
-         // очищаем блок с данными построенного маршрута.
-         $(".route-length1").empty();
-         // очищаем блок с данными о всех точках перелета, по авиамаршруту.
-         $(".route-length2").empty();
-         // обнуляем переменную счетчик меток и массивы.
-		 markers_1 = [];
-		 point = [];
-         geo_points = [];
-         point_geo = [];
-         distance_aero = [];
-         point_aero = [];
-         ch = 1;
-         coord_aero = 0;
-         // устанавливаем после удаления маршрута, новый центр и zoom карты
-         myMap.setCenter([55.752078, 37.621147], 8);
-         // удаление ломаной авиамаршрута с карты
-         var result1 = myMap.geoObjects.remove(myGeoObject);
-         // удаление меток аэропортов с карты, добавленных с помощью ymaps.geoQuery.
-         // очищаем коллекцию
-         var result2 = arPlacemarksRez.remove(myCollection);
-         // удаляем метки с карты
-         // пока закомментируем, чтобы метки коллекции всегда оставались на карте, при загрузке страницы. И можно было бы найти ближ. аэропорт к выбранной точке.
-         //var result3 = arPlacemarksRez.removeFromMap(myMap);
-
-   });
-
-// Добавляем выпадающий список, на карту. С возможностью выбора города.
-// Создадим собственный макет выпадающего списка.
-        ListBoxLayout = ymaps.templateLayoutFactory.createClass(
-            "<button id='my-listbox-header' class='btn btn-success dropdown-toggle' data-toggle='dropdown'>" +
-                "{{data.title}} <span class='caret'></span>" +
-            "</button>" +
-            // Этот элемент будет служить контейнером для элементов списка.
-            // В зависимости от того, свернут или развернут список, этот контейнер будет
-            // скрываться или показываться вместе с дочерними элементами.
-            "<ul id='my-listbox'" +
-                " class='dropdown-menu' role='menu' aria-labelledby='dropdownMenu'" +
-                " style='display: {% if state.expanded %}block{% else %}none{% endif %};'></ul>", {
-
-            build: function() {
-                // Вызываем метод build родительского класса перед выполнением
-                // дополнительных действий.
-                ListBoxLayout.superclass.build.call(this);
-
-                this.childContainerElement = $('#my-listbox').get(0);
-                // Генерируем специальное событие, оповещающее элемент управления
-                // о смене контейнера дочерних элементов.
-                this.events.fire('childcontainerchange', {
-                    newChildContainerElement: this.childContainerElement,
-                    oldChildContainerElement: null
-                });
-            },
-
-            // Переопределяем интерфейсный метод, возвращающий ссылку на
-            // контейнер дочерних элементов.
-            getChildContainerElement: function () {
-                return this.childContainerElement;
-            },
-
-            clear: function () {
-                // Заставим элемент управления перед очисткой макета
-                // откреплять дочерние элементы от родительского.
-                // Это защитит нас от неожиданных ошибок,
-                // связанных с уничтожением dom-элементов в ранних версиях ie.
-                this.events.fire('childcontainerchange', {
-                    newChildContainerElement: null,
-                    oldChildContainerElement: this.childContainerElement
-                });
-                this.childContainerElement = null;
-                // Вызываем метод clear родительского класса после выполнения
-                // дополнительных действий.
-                ListBoxLayout.superclass.clear.call(this);
-            }
+Map.prototype.createMap = function () {
+    
+// Если данные отправляются от формы методом POST. Обрабатываем их, проверяем и выводим: либо текст об успешной отправке, либо текст с предупреждением. На дозаполнение обязательных полей.
+// Тексты выводятся в модальных окнах.
+// Данный метод отправки полей формы, лучше использовать, если предполагается пересылка вложенных файлов, в сообщении.
+var name = $("#name").val();
+var threes = $("#threes").val();
+var email = $("#email").val();
+var address = $("#address").val();
+
+if(name !== '' && threes !== '' && email !== '' && address !== '')
+{
+  $(".main").append('<div id="myModalBox_send" class="modal fade"><div class="modal-dialog"><div class="modal-content"><div class="modal-header" style="color: #594540 !important;"><h5 class="modal-title">Ваш заказ успешно отправлен!</h5>Ждем Вас снова!' +
+  '</div><div class="modal-footer"><button type="button" class="btn btn-primary" data-dismiss="modal" id="close_zakaz">Закрыть</button></div></div></div></div>');
+  $("#myModalBox_send").modal('show');
+
+  // После сообщения об успешной отправке, делаем reload странице, по нажатию на кнопку "Закрыть" модального окна. Чтобы данные формы не отправились дважды.
+  $("#close_zakaz").on("click", function(){
+    window.location.href = "/posadit-les/";
+  });
+}
+
+// Проверяем клик по кнопке в форме заказа. Если клик произошел, проверяем на заполненность обязательных полей. Если какие либо из них не были заполнены, выводим предупреждающий текст.
+$("#send").on("click", function(){
+
+var name = $("#name").val();
+
+if(name === '' && threes === '' && email === '' && address === ''){
+  $(".main").append('<div id="myModalBox_senderr" class="modal fade"><div class="modal-dialog"><div class="modal-content"><div class="modal-header" style="color: #594540 !important;"><h5 class="modal-title">Заполните пожалуйста все обязательные поля.</h5>Помечены символом звездочки *</div><div class="modal-footer"><button type="button" class="btn btn-primary" data-dismiss="modal">Закрыть</button></div></div></div></div>');
+  $("#myModalBox_senderr").modal('show');
+  // Делаем return false кнопке в форме заказа, чтобы оставить форму открытой. Для дозаполнения не достающих полей.
+  return false;
+}
+});
+
+// Если для отправления полей формы заказа, используется метод GET. То обработку и вывод сообщений делаем по другому.
+// Данный метод отправки полей формы, лучше использовать, если пересылка вложенных файлов, в сообщении не предполагается. Также в нем дополнительно, можно выводить даннве по заказу. В модальном окне сообщения об успешной отправке.
+// Получаем строку get-запроса с переменными от формы, из url. Декодируем ее, чтобы русский текст выводился правильно.
+var p_url=decodeURIComponent(location.search).substring(1);
+
+// Если строка не пустая, обрабатываем переменные. Получая только значения, из пары ключ-значение.
+if(p_url !== '') {
+
+// Режем строку запроса, по символу &, кладем ее в массив parametr.
+var parametr=p_url.split("&");
+
+var threes_zakaz = parametr[0].split("threes=");
+var threes_zakaz1 = threes_zakaz[1];
+console.log("Кол-во саженцев:", threes_zakaz1);
+
+var name_zakaz = parametr[1].split("name=");
+var name_zakaz1 = name_zakaz[1];
+console.log("Имя заказчика:", name_zakaz1);
+
+var email_zakaz = parametr[2].split("email=");
+var email_zakaz1 = email_zakaz[1];
+console.log("Email заказчика:", email_zakaz1);
+
+var address_zakaz = parametr[3].split("address=");
+var address_zakaz1 = address_zakaz[1];
+console.log("Адрес доставки саженцев:", address_zakaz1);
+
+var phone_zakaz = parametr[4].split("phone=");
+var phone_zakaz1 = phone_zakaz[1];
+console.log("Телефон заказчика:", phone_zakaz1);
+
+//Если все обязательные поля формы были заполнены, пишем в модальном окне текст об успешном отправлении заказа. И обновляем страницу по кнопке Закрыть.
+if(threes_zakaz1 !== '' && name_zakaz1 !== '' && email_zakaz1 !== '' && address_zakaz1 !== ''){
+
+/*
+$.get('http://intranet.russiancarbon.org/data/processes/message.p', {name_zakaz:name_zakaz}, function(data){
+	alert('Сервер ответил: '+data);
+});
+*/
+
+$(".main").append('<div id="myModalBox_send" class="modal fade"><div class="modal-dialog"><div class="modal-content"><div class="modal-header" style="color: #594540 !important;"><h5 class="modal-title">Ваш заказ успешно отправлен!</h5>Ждем Вас снова!' +
+'<hr />' +
+'<div style="text-align: left; margin-top: -10px;"><h3><i style="color: #0088CB; font-size: 16px;">Данные по заказу:</i></h3><small><b style="color: #5cb85c;">Кол-во саженцев:</b> <b style="color: #99490E;">' + threes_zakaz1 + '</b><br />' +
+'<b style="color: #5cb85c;">Имя заказчика:</b> <b style="color: #99490E;">' + name_zakaz1 + '</b><br />' +
+'<b style="color: #5cb85c;">Email заказчика:</b> <b style="color: #99490E;">' + email_zakaz1 + '</b><br />' +
+'<b style="color: #5cb85c;">Адрес доставки саженцев:</b> <b style="color: #99490E;">' + address_zakaz1 + '</b><br />' +
+'<b style="color: #5cb85c;">Телефон заказчика:</b> <b style="color: #99490E;">' + phone_zakaz1 + '</b></small></div>' +
+'</div><div class="modal-footer"><button type="button" class="btn btn-primary" data-dismiss="modal" id="close_zakaz">Закрыть</button></div></div></div></div>');
+$("#myModalBox_send").modal('show');
+
+$("#close_zakaz").on("click", function(){
+  window.location.href = "/posadit-les/";
+});
+}
+//Если не все обязат. поля были заполнены, выводим предупреждающий текст. И выводим в модальном окне форму для заполнения заказа заново.
+else{
+$(".main").append('<div id="myModal" class="modal fade"><div class="modal-dialog"><div class="modal-content">' +
+'<div class="modal-header"><button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button><h3><i style="color: #8B0000; font-size: 20px;">Заполните пожалуйста все необходимые поля формы.</i></h3><h4 class="modal-title" id="myModalLabel" style="color: #594540 !important;">Оформление заказа на посадку леса</h4></div>' +
+'<div class="modal-body" style="color: #696969 !important;"><form id="contact" name="contact" action="/posadit-les/" method="get" enctype="multipart/form-data">' +
+'<div class="control-group"><label class="control-label" for="threes" style="font-size: 14px; color: #6B8E23;">Укажите кол-во саженцев <b style="color: red;">*</b></label><div class="controls"><input id="threes" name="threes" type="text" placeholder="5" class="input-xlarge"></div></div><br />' +
+'<div class="control-group"><label class="control-label" for="name" style="font-size: 12px; color: #6B8E23;">Ваше имя <b style="color: red;">*</b></label><div class="controls"><input id="name" name="name" type="text" placeholder="" class="input-xlarge"></div></div>' +
+'<div class="control-group" style="margin-top: 5px;"><label class="control-label" for="email" style="font-size: 12px; color: #6B8E23;">Контактный email <b style="color: red;">*</b></label><div class="controls"><input id="email" name="email" type="text" placeholder="email" class="input-xlarge"></div></div>' +
+'<div class="control-group" style="margin-top: 5px;"><label class="control-label" for="address" style="font-size: 12px; color: #6B8E23;">Адрес доставки саженцев <b style="color: red;">*</b></label><div class="controls"><input id="address" name="address" type="text" placeholder="" class="input-xlarge"></div></div>' +
+'<div class="control-group" style="margin-top: 5px;"><label class="control-label" for="phone" style="font-size: 12px; color: #6B8E23;">Ваш телефон</label><div class="controls"><input id="phone" name="phone" type="text" placeholder="(+7)" class="input-xlarge"></div></div>' +
+//'<div class="control-group" style="margin-top: 5px;"><label class="control-label" for="singlebutton-0"></label><div class="controls"><button id="send" name="send" value class="btn btn-success">Отправить</button></div></div>' +
+'<br /><input class="btn btn-success" id="send" type="submit" value="Оформить заказ">' +
+//'<input type="hidden" name="send_zakaz" value="send_zakaz">' +
+'</form></div>');
+$("#myModal").modal('show');
+}
+
+}
+
+// Обработка значений полученных из формы методом Get.
+/*
+var values_zakaz = [];
+var j;
+for(var i in parametr) {
+    j=parametr[i].split("=");
+    values_zakaz[j[0]]=unescape(j[1]);
+    //console.log(j);
+    //console.log(values_zakaz);
+}
+
+var tmp = [];		// два вспомагательных
+var tmp2 = [];		// массива
+var param = [];
+
+var get = decodeURIComponent(location.search);	// строка GET запроса
+if(get !== '') {
+	tmp = (get.substr(1)).split('&');	// разделяем переменные
+	for(var i=0; i < tmp.length; i++) {
+		tmp2 = tmp[i].split('=');		// массив param будет содержать
+		param[tmp2[0]] = tmp2[1];		// пары ключ(имя переменной)-значение
+	}
+	var obj = document.getElementById('greq');	// вывод на экран
+	for (var key in param) {
+		obj.innerHTML += key+" = "+param[key]+"<br>";
+	}
+}
+*/
+
+    // Данные о местоположении пользователя, определённом по IP.
+    var geolocation = ymaps.geolocation;
+    // Координаты местопложения пользователя. По ним будем открывать центр карты.
+    var coords_location = [geolocation.latitude, geolocation.longitude];
+    // Результат смотрим в консоли
+    //console.log(geolocation.country, geolocation.city, geolocation.region, coords_location);
+
+    //Получаем значения высоты и ширины экрана монитора.
+    var heightR = $(window).height();// высота экрана
+    // Делаем отступ:
+    var heightR_1 = heightR - 78;
+    // Делаем отступ:
+    var widthR = $(window).width();// ширина экрана
+    var widthR_1 = widthR - 25;
+
+    // Устанавливаем полученные значения, в качестве размеров для блока с картой.
+    $('#map_main1').css({'width':widthR_1,'height':heightR_1});
+
+    this.yMap = new ymaps.Map("map_main1", {
+            center: [55.751574, 37.573856],
+            zoom: 10,
+            type: 'yandex#hybrid',
+            controls: ['zoomControl']
         }),
+        counter = 0;
 
-        // Также создадим макет для отдельного элемента списка.
-        ListBoxItemLayout = ymaps.templateLayoutFactory.createClass(
-            "<li><a>{{data.content}}</a></li>"
-        ),
+    // Сделаем запрос на геокодирование, а затем спозиционируем карту, чтобы
+    // все объекты попадали в видимую область карты и коэффициент масштабирования был
+    // максимально возможным.
 
-        // Создадим 2 пункта выпадающего списка
-        listBoxItems = [
-            new ymaps.control.ListBoxItem({
-                data: {
-                    content: 'Москва',
-                    center: [55.752078, 37.621147],
-                    zoom: 10
-                }
-            }),
-            new ymaps.control.ListBoxItem({
-                data: {
-                    content: 'Санкт-Петербург',
-                    center: [59.918153, 30.305578],
-                    zoom: 10
-                }
-            }),
-            new ymaps.control.ListBoxItem({
-                data: {
-                    content: 'Омск',
-                    center: [54.990215, 73.365535],
-                    zoom: 10
-                }
-            })
-        ],
+    //var result = ymaps.geoQuery(ymaps.geocode('Арбат')).applyBoundsToMap(myMap, {checkZoomRange: true});
+    // Откластеризуем полученные объекты и добавим кластеризатор на карту.
+    // Обратите внимание, что кластеризатор будет создан сразу, а объекты добавлены в него
+    // только после того, как будет получен ответ от сервера.
+    //myMap.geoObjects.add(result.clusterize());
 
-        // Теперь создадим список, содержащий 2 пунтка.
-        listBox = new ymaps.control.ListBox({
-                items: listBoxItems,
-                data: {
-                    title: 'Выбрать пункт:'
-                },
-                options: {
-                    // С помощью опций можно задать как макет непосредственно для списка,
-                    layout: ListBoxLayout,
-                    // так и макет для дочерних элементов списка. Для задания опций дочерних
-                    // элементов через родительский элемент необходимо добавлять префикс
-                    // 'item' к названиям опций.
-                    itemLayout: ListBoxItemLayout
-                }
-            });
 
-        listBox.events.add('click', function (e) {
-            // Получаем ссылку на объект, по которому кликнули.
-            // События элементов списка пропагируются
-            // и их можно слушать на родительском элементе.
-            var item = e.get('target');
-            // Клик на заголовке выпадающего списка обрабатывать не надо.
-            if (item != listBox) {
-                myMap.setCenter(
-                    item.data.get('center'),
-                    item.data.get('zoom')
-                );
-            }
+        // Создание макетов содержимого балунов. По каждой из успешных акций Фонда.
+
+        // Макет создается с помощью фабрики макетов с помощью текстового шаблона. Макет балуна акции с компанией Алкоа.
+        BalloonContentLayout = ymaps.templateLayoutFactory.createClass(
+            '<div style="margin: 10px;">' +
+              '<p style="background-color: rgba(0, 136, 203, 1) !important; padding: 5px; color: #ffffff;"><b style="font-size: 14px;">Акция с компанией Алкоа</b><br /><i style="font-size: 12px;">25 октября 2014 года | Alcoa Foundation</i></p><p style="text-align: justify; margin-top: 11px;"><img src="http://www.rosleshoz.gov.ru/dep/south/press/461/15446629388_d46a49acc5_o.jpg" title="Акция с компанией Алкоа" width="170px" style="float: right; padding: 2px; border: 1px solid rgba(0, 136, 203, 1); border-radius: 5px; margin-left: 7px; margin-top: 7px;" /><small>25 октября 2014 года посадка деревьев прошла на 3 гектарах сгоревшего леса рядом с хутором Поцелуев в Ростовской области при финансовой поддержке Фонда «Алкоа». Помимо сотрудников Алкоа в восстановлении лесов также приняли участие представители администрации Белокалитвинского городского поселения и воспитанники Белокалитвинского казачьего кадетского корпуса им. Матвея Платова. В самом начале мероприятия участников торжественно поприветствовала администрация района, представители ЗАО «Алкоа Металлург Рус» и фонда «Русский Углерод». В продолжение официальной части выступили представители Фонда Антон Чупилко и Алексей Шадрин, рассказав о том, насколько важно восстановление лесов для сохранения биоразнообразия и климата.<br /><p style="border-top: 1px solid #808080; margin-top: 14px;"></p><p style="margin-top: 11px;"><b style="color: #99490E;">Поглощено 1190 тонн CO<sub>2</sub></b><br /><b style="color: #5cb85c;">Восстановлено 12000 деревьев</b><br /><b style="color: #0088CB; font-weight: bold;">Кол-во волонтеров 350 человек</b></small></p></p><br /><a href="#" class="btn btn-success" id="show_event1">Посмотреть восстановленый участок</a>' +
+            '</div>', {
+
+            // Переопределяем функцию build, чтобы при создании макета начинать
+            // слушать событие click на кнопке-счетчике.
+            build: function () {
+                // Сначала вызываем метод build родительского класса.
+                BalloonContentLayout.superclass.build.call(this);
+                // А затем выполняем дополнительные действия.
+                $('#show_event1').bind('click', this.onCounterClick);
+            },
+
+            // Аналогично переопределяем функцию clear, чтобы снять
+            // прослушивание клика при удалении макета с карты.
+            clear: function () {
+                // Выполняем действия в обратном порядке - сначала снимаем слушателя,
+                // а потом вызываем метод clear родительского класса.
+                $('#show_event1').unbind('click', this.onCounterClick);
+                BalloonContentLayout.superclass.clear.call(this);
+            },
+
+            onCounterClick: function () {
+
+                // Скрываем метки с выбором участков, на карте. Из GeoQuery запроса result.
+                result.setOptions('visible', false);
+
+                // Добавляем новый тайл(слой) на карту, ввиде png-картинки леса. На него будем добавлять геообъект(круг), с указанной площадью посаженного леса.
+                var layer = new ymaps.Layer("http://intranet.russiancarbon.org/f/min/posadit-les/tiles/tile_forest.png", {
+                  projection: ymaps.projection.sphericalMercator
+                });
+
+                /*
+                var layer = new ymaps.Layer("http://intranet.russiancarbon.org/f/min/posadit-les/tiles/%z/%x-%y.png", {
+                  projection: ymaps.projection.sphericalMercator
+                });
+                */
+
+                // Подстраиваем размер тайла(980px), под масштаб карты. С соответствующим приближением.
+                layer.getTileSize = function (zoom) {
+                  m = zoom > 12 ? Math.pow(2, zoom - 7.5) : 980;
+                  return [m, m];
+                };
+
+                // Добавляем новый слой(тайл) на карту.
+                myMap.layers.add(layer);
+
+                // Закрываем балун метки с информацией, по выбранной акции Фонда.
+                myMap.balloon.close();
+                // Отключаем кнопки масштабирования карты, справа вверху. Чтобы была только одна возможность вернуться к выбору участков. По кнопке "Вернуться к выбору участка". В обход тайла с лесом.
+                myMap.controls.remove('zoomControl');
+                //Отключаем возможность масштабирования колесиком мыши
+                myMap.behaviors.disable('scrollZoom');
+                /*
+                // Будем отслеживать изменение уровня масштабирования карты
+                myMap.events.add('boundschange', function (event) {
+                  layers_forest.destroy();
+                });
+                */
+
+                // Добавляем, после показа посаженного леса, на карту кнопку "Вернуться к выбору участка". Чтобы по ней можно было бы обновить карту и вернуться к выбору других акций Фонда.
+                // Создаем пользоваетльский макет кнопки. С указанием класс Bootstrap3.
+                var ButtonLayout = ymaps.templateLayoutFactory.createClass(
+                "<div class='btn btn-warning'>" +
+                   "{{data.content}}" +
+                "</div>"
+                ),
+                firstButton = new ymaps.control.Button({
+                 data: {
+                   content: "Вернуться к выбору участка"
+                 },
+                 options: {
+                   // Подключаем созданный макет.
+                   layout: ButtonLayout
+                 }
+                 });
+                // Устанавливаем максимальную ширину кнопки. Чтобы весь текст помещался на ней.
+                firstButton.options.set({'selectOnClick': false, 'maxWidth': 200});
+                // Указываем расположение кнопки на карте.
+                myMap.controls.add(firstButton, {float: 'left'});
+
+                // При нажатии на кнопку, обновляем страницу с картой.
+                firstButton.events.add("click", function () {
+                 //alert("Клик по кнопке произошел.");
+                 document.location.reload();
+                });
+
+                // Загружаем через загрузчик модулей, весь код из файла area_square_1.js, по построению площади посаженного леса. Разделенной на квадраты.
+                // Действия по добавлению геоколлекции и балуна, на карту, выполняем здесь же в контексте require. Т.к. все загруженные данные не будут доступны вне его. Указываем одну зависимость от jquery.
+                require(["http://intranet.russiancarbon.org/f/min/posadit-les/area_square_1.js"], function(jQuery) {
+                  // alert("это выполнится только тогда, когда файл area_square_1.js будет загружен");
+
+                  // Открываем в центре круга, балун с информацией о площади посадки.
+                  myMap.balloon.open([48.234599, 40.699303], {contentBody: 'Площадь высадки леса - 3 га'});
+
+                  // Добавляем коллекцию на карту.
+                  myMap.geoObjects.add(myGeoObjects);
+                  // Устанавливаем карте центр и масштаб так, чтобы охватить коллекцию целиком.
+                  myMap.setBounds(myGeoObjects.getBounds());
+
+                  /*
+                  // При клике на любом из квадратов в коллекции, выводится alert с текстом.
+                  // Это может пригодится при заказе посадки леса, на не засаженных участках. Если вся площадь, из пустых квадратов.
+                  myGeoObjects.events.add('click', function (e) {
+                   alert("Клик по квадрату в коллекции, произошел.");
+                  });
+                  */
+
+                  // Отслеживаем клик по не засаженному участку леса(пустой квадрат на карте). При клике открываем балун с кнопкой "Заказать посадку леса".
+                  // Добавляем обработку клика по ней. Добавляем к кнопке событие onclick - onclick="return Show_zakaz(this);". С вызовом функции Show_zakaz.
+                  // Данную функцию помещаем в файл area_square_1.js. Отвечающий за построение площади посаженного леса, по выбранной акции Фонда.
+                  squarePlacemark_down_empty.events.add('click', function (e) {
+
+                  // Закрываем балун с площадью посадки.
+                  myMap.balloon.close();
+
+                  myMap.balloon.open([48.234065, 40.699303], {contentBody: '<div id="menu_zakaz" style="margin-right: 7px;"><b style="color: #999966; font-size: 12px;">Вы можете посадить здесь деревья<br /><br /></b> <button type="submit" class="btn btn-warning" id="zakaz" onclick="return Show_zakaz(this);" data-toggle="modal" data-target="#myModal">Заказать посадку леса</button></div>'});
+
+                  /*
+                  // Таким образом можно отследить клик, по балуну с кнопкой "Заказать посадку леса". На пустых участках.
+                  myMap.balloon.events.add('click', function (e) {
+                    alert("Клик по кнопке произошел. Оформляйте заказ!");
+                  });
+                  */
+
+                  });
+
+                });
+
+                }
+        });
+        // Макет балуна акции с компаниями Алкоа, Топливный регион.
+        BalloonContentLayout1 = ymaps.templateLayoutFactory.createClass(
+            '<div style="margin: 10px;">' +
+              '<p style="background-color: rgba(0, 136, 203, 1) !important; padding: 5px; color: #ffffff;"><b style="font-size: 14px;">Акция с компаниями Алкоа, Топливный регион</b><br /><i style="font-size: 12px;">28 сентября 2013 года | Alcoa Foundation, Топливный регион </i></p><p style="text-align: justify; margin-top: 11px;"><img src="https://russiancarbon.org/r/_gallery/B6009F14-2035-43CA-ABBD-9F6DC4110490/1.jpg" title="Акция с компаниями Алкоа, Топливный регион" width="170px" style="float: right; padding: 2px; border: 1px solid rgba(0, 136, 203, 1); border-radius: 5px; margin-left: 7px; margin-top: 7px;" /><small>В посадках поддержку «Русскому углероду» оказал Фонд Alcoa, который осуществляет глобальную программу «10 миллионов деревьев». В мероприятии участвовали активисты Фонда возрождения лесов, алтайского экоклуба «Черный аист», компания «Топливный регион», студенты и преподаватели МГИМО, блогеры и журналисты. Фонд презентовал свою новую программу «I like green», направленную на восстановление и сохранение лесов России, а также на борьбу с глобальными климатическими изменениями.<br /><p style="border-top: 1px solid #808080; margin-top: 14px;"></p><p style="margin-top: 11px;"><b style="color: #99490E;">Поглощено 1380 тонн CO<sub>2</sub></b><br /><b style="color: #5cb85c;">Восстановлено 13000 деревьев</b><br /><b style="color: #0088CB; font-weight: bold;">Кол-во волонтеров 100 человек</b></small></p></p><br /><a href="#" class="btn btn-success" id="show_event2">Посмотреть восстановленый участок</a>' +
+            '</div>', {
+
+            // Переопределяем функцию build, чтобы при создании макета начинать
+            // слушать событие click на кнопке-счетчике.
+            build: function () {
+                // Сначала вызываем метод build родительского класса.
+                BalloonContentLayout.superclass.build.call(this);
+                // А затем выполняем дополнительные действия.
+                $('#show_event2').bind('click', this.onCounterClick);
+            },
+
+            // Аналогично переопределяем функцию clear, чтобы снять
+            // прослушивание клика при удалении макета с карты.
+            clear: function () {
+                // Выполняем действия в обратном порядке - сначала снимаем слушателя,
+                // а потом вызываем метод clear родительского класса.
+                $('#show_event2').unbind('click', this.onCounterClick);
+                BalloonContentLayout.superclass.clear.call(this);
+            },
+
+            onCounterClick: function () {
+
+                // Скрываем метки с выбором участков, на карте. Из GeoQuery запроса result.
+                result.setOptions('visible', false);
+
+                // Закрываем балун метки с информацией, по выбранной акции Фонда.
+                myMap.balloon.close();
+                // Отключаем кнопки масштабирования карты, справа вверху. Чтобы была только одна возможность вернуться к выбору участков. По кнопке "Вернуться к выбору участка". В обход тайла с лесом.
+                myMap.controls.remove('zoomControl');
+                //Отключаем возможность масштабирования колесиком мыши
+                myMap.behaviors.disable('scrollZoom');
+
+                // Добавляем, после показа посаженного леса, на карту кнопку "Вернуться к выбору участка". Чтобы по ней можно было бы обновить карту и вернуться к выбору других акций Фонда.
+                // Создаем пользоваетльский макет кнопки. С указанием класс Bootstrap3.
+                var ButtonLayout = ymaps.templateLayoutFactory.createClass(
+                "<div class='btn btn-warning'>" +
+                   "{{data.content}}" +
+                "</div>"
+                ),
+                firstButton = new ymaps.control.Button({
+                 data: {
+                   content: "Вернуться к выбору участка"
+                 },
+                 options: {
+                   // Подключаем созданный макет.
+                   layout: ButtonLayout
+                 }
+                 });
+                // Устанавливаем максимальную ширину кнопки. Чтобы весь текст помещался на ней.
+                firstButton.options.set({'selectOnClick': false, 'maxWidth': 200});
+                // Указываем расположение кнопки на карте.
+                myMap.controls.add(firstButton, {float: 'left'});
+
+                // При нажатии на кнопку, обновляем страницу с картой.
+                firstButton.events.add("click", function () {
+                 //alert("Клик по кнопке произошел.");
+                 document.location.reload();
+                });
+
+                // Загружаем через загрузчик модулей, весь код из файла area_square_2.js, по построению площади посаженного леса. Разделенной на квадраты.
+                // Действия по добавлению геоколлекции и балуна, на карту, выполняем здесь же в контексте require. Т.к. все загруженные данные не будут доступны вне его. Указываем одну зависимость от jquery.
+                require(["http://intranet.russiancarbon.org/f/min/posadit-les/area_square_2.js"], function(jQuery) {
+                  // alert("это выполнится только тогда, когда файл area_square_1.js будет загружен");
+
+                  // Открываем в центре круга, балун с информацией о площади посадки.
+                  myMap.balloon.open([55.363411, 39.736211], {contentBody: 'Площадь высадки леса - 3 га'});
+
+                  // Добавляем коллекцию на карту.
+                  myMap.geoObjects.add(myGeoObjects);
+                  // Устанавливаем карте центр и масштаб так, чтобы охватить коллекцию целиком.
+                  myMap.setBounds(myGeoObjects.getBounds());
+
+                });
+
+                }
+        });
+        // Макет балуна акции Наш лес. Посади свое дерево.
+        BalloonContentLayout2 = ymaps.templateLayoutFactory.createClass(
+            '<div style="margin: 10px;">' +
+              '<p style="background-color: rgba(0, 136, 203, 1) !important; padding: 5px; color: #ffffff;"><b style="font-size: 14px;">Акция Наш лес. Посади свое дерево.</b><br /><i style="font-size: 12px;">13 сентября 2014 года | Фонд "Русский углерод" </i></p><p style="text-align: justify; margin-top: 11px;"><img src="http://www.forest.ru/upload/main/b12/b12fba239eaa2df056d606c2f0cacb18.jpg" title="Акция Наш лес. Посади свое дерево." width="170px" style="float: right; padding: 2px; border: 1px solid rgba(0, 136, 203, 1); border-radius: 5px; margin-left: 7px; margin-top: 7px;" /><small>Фонд принял участие в акции "Наш лес. Посади свое дерево". В посадке деревьев в Балашихе приняли участие более 3000 человек, как местных жителей, так и членов трудовых коллективов различных государственных и частных организаций и компаний Московской области.<br /><p style="border-top: 1px solid #808080; margin-top: 14px;"></p><p style="margin-top: 11px;"><b style="color: #5cb85c;">Восстановлено 1000 деревьев</b><br /><b style="color: #0088CB; font-weight: bold;">Кол-во волонтеров 15 человек</b></small></p></p><br /><a href="#" class="btn btn-success" id="show_event3">Посмотреть восстановленый участок</a>' +
+            '</div>', {
+
+            // Переопределяем функцию build, чтобы при создании макета начинать
+            // слушать событие click на кнопке-счетчике.
+            build: function () {
+                // Сначала вызываем метод build родительского класса.
+                BalloonContentLayout.superclass.build.call(this);
+                // А затем выполняем дополнительные действия.
+                $('#show_event3').bind('click', this.onCounterClick);
+            },
+
+            // Аналогично переопределяем функцию clear, чтобы снять
+            // прослушивание клика при удалении макета с карты.
+            clear: function () {
+                // Выполняем действия в обратном порядке - сначала снимаем слушателя,
+                // а потом вызываем метод clear родительского класса.
+                $('#show_event3').unbind('click', this.onCounterClick);
+                BalloonContentLayout.superclass.clear.call(this);
+            },
+
+            onCounterClick: function () {
+
+                // Скрываем метки с выбором участков, на карте. Из GeoQuery запроса result.
+                result.setOptions('visible', false);
+
+                // Добавляем новый тайл(слой) на карту, ввиде png-картинки леса. На него будем добавлять геообъект(круг), с указанной площадью посаженного леса.
+                var layer = new ymaps.Layer("http://intranet.russiancarbon.org/f/min/posadit-les/tiles/tile_forest.png", {
+                  projection: ymaps.projection.sphericalMercator
+                });
+
+                // Подстраиваем размер тайла(980px), под масштаб карты. С соответствующим приближением.
+                layer.getTileSize = function (zoom) {
+                  m = zoom >= 18 ? Math.pow(2, zoom - 7.5) : 980;
+                  return [m, m];
+                };
+
+                myMap.layers.add(layer);
+
+                // Закрываем балун метки с информацией, по выбранной акции Фонда.
+                myMap.balloon.close();
+                // Отключаем кнопки масштабирования карты, справа вверху. Чтобы была только одна возможность вернуться к выбору участков. По кнопке "Вернуться к выбору участка". В обход тайла с лесом.
+                myMap.controls.remove('zoomControl');
+                //Отключаем возможность масштабирования колесиком мыши
+                myMap.behaviors.disable('scrollZoom');
+
+                // Добавляем, после показа посаженного леса, на карту кнопку "Вернуться к выбору участка". Чтобы по ней можно было бы обновить карту и вернуться к выбору других акций Фонда.
+                // Создаем пользоваетльский макет кнопки. С указанием класс Bootstrap3.
+                var ButtonLayout = ymaps.templateLayoutFactory.createClass(
+                "<div class='btn btn-warning'>" +
+                   "{{data.content}}" +
+                "</div>"
+                ),
+                firstButton = new ymaps.control.Button({
+                 data: {
+                   content: "Вернуться к выбору участка"
+                 },
+                 options: {
+                   // Подключаем созданный макет.
+                   layout: ButtonLayout
+                 }
+                 });
+                // Устанавливаем максимальную ширину кнопки. Чтобы весь текст помещался на ней.
+                firstButton.options.set({'selectOnClick': false, 'maxWidth': 200});
+                // Указываем расположение кнопки на карте.
+                myMap.controls.add(firstButton, {float: 'left'});
+
+                // При нажатии на кнопку, обновляем страницу с картой.
+                firstButton.events.add("click", function () {
+                 //alert("Клик по кнопке произошел.");
+                 document.location.reload();
+                });
+
+                // Загружаем через загрузчик модулей, весь код из файла area_square_3.js, по построению площади посаженного леса. Разделенной на квадраты.
+                // Действия по добавлению геоколлекции и балуна, на карту, выполняем здесь же в контексте require. Т.к. все загруженные данные не будут доступны вне его. Указываем одну зависимость от jquery.
+                require(["http://intranet.russiancarbon.org/f/min/posadit-les/area_square_3.js"], function(jQuery) {
+                  // alert("это выполнится только тогда, когда файл area_square_1.js будет загружен");
+
+                  // Открываем в центре круга, балун с информацией о площади посадки.
+                  myMap.balloon.open([55.823180, 37.928795], {contentBody: 'Площадь высадки леса - 0.25 га'});
+
+                  // Добавляем коллекцию на карту.
+                  myMap.geoObjects.add(myGeoObjects);
+                  // Устанавливаем карте центр и масштаб так, чтобы охватить коллекцию целиком.
+                  myMap.setBounds(myGeoObjects.getBounds());
+                });
+
+                }
+        });
+        // Макет балуна акции Stop CO2.
+        BalloonContentLayout3 = ymaps.templateLayoutFactory.createClass(
+            '<div style="margin: 10px;">' +
+              '<p style="background-color: rgba(0, 136, 203, 1) !important; padding: 5px; color: #ffffff;"><b style="font-size: 14px;">Акция Stop CO2</b><br /><i style="font-size: 12px;">19 мая 2012 года | Bureau Veritas </i></p><p style="text-align: justify; margin-top: 11px;"><img src="https://russiancarbon.org/r/_gallery/1CA49BAB-6342-40ED-857C-01324219D0A3/banner.jpg" title="Акция Stop CO2" width="170px" style="float: right; padding: 2px; border: 1px solid rgba(0, 136, 203, 1); border-radius: 5px; margin-left: 7px; margin-top: 7px;" /><small>19 мая неподалеку от деревни Федерово Орехово-Зуевского района прошла первая акция в рамках климатической программы «Зеленое дыхание планеты». Посадка леса осуществлялась совместно с Фондом возрождения лесов, аудиторской компанией «Бюро Веритас» и движением молодых политических экологов «Местные» при поддержке Управления лесного хозяйства по Москве и Московской области.<br /><p style="border-top: 1px solid #808080; margin-top: 14px;"></p><p style="margin-top: 11px;"><b style="color: #5cb85c;">Восстановлено 6000 деревьев</b><br /><b style="color: #0088CB; font-weight: bold;">Кол-во волонтеров 28 человек</b></small></p></p><br /><a href="#" class="btn btn-success" id="show_event4">Посмотреть восстановленый участок</a>' +
+            '</div>', {
+
+            // Переопределяем функцию build, чтобы при создании макета начинать
+            // слушать событие click на кнопке-счетчике.
+            build: function () {
+                // Сначала вызываем метод build родительского класса.
+                BalloonContentLayout.superclass.build.call(this);
+                // А затем выполняем дополнительные действия.
+                $('#show_event4').bind('click', this.onCounterClick);
+            },
+
+            // Аналогично переопределяем функцию clear, чтобы снять
+            // прослушивание клика при удалении макета с карты.
+            clear: function () {
+                // Выполняем действия в обратном порядке - сначала снимаем слушателя,
+                // а потом вызываем метод clear родительского класса.
+                $('#show_event4').unbind('click', this.onCounterClick);
+                BalloonContentLayout.superclass.clear.call(this);
+            },
+
+            onCounterClick: function () {
+
+                // Скрываем метки с выбором участков, на карте. Из GeoQuery запроса result.
+                result.setOptions('visible', false);
+
+                // Добавляем новый тайл(слой) на карту, ввиде png-картинки леса. На него будем добавлять геообъект(круг), с указанной площадью посаженного леса.
+                var layer = new ymaps.Layer("http://intranet.russiancarbon.org/f/min/posadit-les/tiles/tile_forest.png", {
+                  projection: ymaps.projection.sphericalMercator
+                });
+
+                // Подстраиваем размер тайла(980px), под масштаб карты. С соответствующим приближением.
+                layer.getTileSize = function (zoom) {
+                  m = zoom >= 18 ? Math.pow(2, zoom - 7.5) : 980;
+                  return [m, m];
+                };
+
+                myMap.layers.add(layer);
+
+                // Закрываем балун метки с информацией, по выбранной акции Фонда.
+                myMap.balloon.close();
+                // Отключаем кнопки масштабирования карты, справа вверху. Чтобы была только одна возможность вернуться к выбору участков. По кнопке "Вернуться к выбору участка". В обход тайла с лесом.
+                myMap.controls.remove('zoomControl');
+                //Отключаем возможность масштабирования колесиком мыши
+                myMap.behaviors.disable('scrollZoom');
+
+                // Добавляем, после показа посаженного леса, на карту кнопку "Вернуться к выбору участка". Чтобы по ней можно было бы обновить карту и вернуться к выбору других акций Фонда.
+                // Создаем пользоваетльский макет кнопки. С указанием класс Bootstrap3.
+                var ButtonLayout = ymaps.templateLayoutFactory.createClass(
+                "<div class='btn btn-warning'>" +
+                   "{{data.content}}" +
+                "</div>"
+                ),
+                firstButton = new ymaps.control.Button({
+                 data: {
+                   content: "Вернуться к выбору участка"
+                 },
+                 options: {
+                   // Подключаем созданный макет.
+                   layout: ButtonLayout
+                 }
+                 });
+                // Устанавливаем максимальную ширину кнопки. Чтобы весь текст помещался на ней.
+                firstButton.options.set({'selectOnClick': false, 'maxWidth': 200});
+                // Указываем расположение кнопки на карте.
+                myMap.controls.add(firstButton, {float: 'left'});
+
+                // При нажатии на кнопку, обновляем страницу с картой.
+                firstButton.events.add("click", function () {
+                 //alert("Клик по кнопке произошел.");
+                 document.location.reload();
+                });
+
+                // Загружаем через загрузчик модулей, весь код из файла area_square_4.js, по построению площади посаженного леса. Разделенной на квадраты.
+                // Действия по добавлению геоколлекции и балуна, на карту, выполняем здесь же в контексте require. Т.к. все загруженные данные не будут доступны вне его. Указываем одну зависимость от jquery.
+                require(["http://intranet.russiancarbon.org/f/min/posadit-les/area_square_4.js"], function(jQuery) {
+                  // alert("это выполнится только тогда, когда файл area_square_1.js будет загружен");
+
+                  // Открываем в центре круга, балун с информацией о площади посадки.
+                  myMap.balloon.open([48.234599, 40.699303], {contentBody: 'Площадь высадки леса - 1.5 га'});
+
+                  // Добавляем коллекцию на карту.
+                  myMap.geoObjects.add(myGeoObjects);
+                  // Устанавливаем карте центр и масштаб так, чтобы охватить коллекцию целиком.
+                  myMap.setBounds(myGeoObjects.getBounds());
+                });
+
+                }
+        });
+        // Макет балуна акции День дерева.
+        BalloonContentLayout4 = ymaps.templateLayoutFactory.createClass(
+            '<div style="margin: 10px;">' +
+              '<p style="background-color: rgba(0, 136, 203, 1) !important; padding: 5px; color: #ffffff;"><b style="font-size: 14px;">Акция День дерева</b><br /><i style="font-size: 12px;">20 октября 2012 года | Deutsche Bank </i></p><p style="text-align: justify; margin-top: 11px;"><img src="http://russiancarbon.org/r/_content/baners/day_tree.jpg" title="Акция День дерева" width="170px" style="float: right; padding: 2px; border: 1px solid rgba(0, 136, 203, 1); border-radius: 5px; margin-left: 7px; margin-top: 7px;" /><small>Фонд «Русский Углерод», совместно с компанией "Дойче Банк", Фондом возрождения лесов и журналом «Дерево.RU» провели «День Дерева» - первый в истории России праздник, посвященный дереву, как одному из ключевых элементов устойчивого состояния биосферы и жизни на планете. Праздник состоялся 20 октября в Орехово-Зуевском районе Московской области.<br /><p style="border-top: 1px solid #808080; margin-top: 14px;"></p><p style="margin-top: 11px;"><b style="color: #5cb85c;">Восстановлено 8000 деревьев</b><br /><b style="color: #0088CB; font-weight: bold;">Кол-во волонтеров 36 человек</b></small></p></p><br /><a href="#" class="btn btn-success" id="show_event5">Посмотреть восстановленый участок</a>' +
+            '</div>', {
+
+            // Переопределяем функцию build, чтобы при создании макета начинать
+            // слушать событие click на кнопке-счетчике.
+            build: function () {
+                // Сначала вызываем метод build родительского класса.
+                BalloonContentLayout.superclass.build.call(this);
+                // А затем выполняем дополнительные действия.
+                $('#show_event5').bind('click', this.onCounterClick);
+            },
+
+            // Аналогично переопределяем функцию clear, чтобы снять
+            // прослушивание клика при удалении макета с карты.
+            clear: function () {
+                // Выполняем действия в обратном порядке - сначала снимаем слушателя,
+                // а потом вызываем метод clear родительского класса.
+                $('#show_event5').unbind('click', this.onCounterClick);
+                BalloonContentLayout.superclass.clear.call(this);
+            },
+
+            onCounterClick: function () {
+
+                // Скрываем метки с выбором участков, на карте. Из GeoQuery запроса result.
+                result.setOptions('visible', false);
+
+                // Закрываем балун метки с информацией, по выбранной акции Фонда.
+                myMap.balloon.close();
+                // Отключаем кнопки масштабирования карты, справа вверху. Чтобы была только одна возможность вернуться к выбору участков. По кнопке "Вернуться к выбору участка". В обход тайла с лесом.
+                myMap.controls.remove('zoomControl');
+                //Отключаем возможность масштабирования колесиком мыши
+                myMap.behaviors.disable('scrollZoom');
+
+                // Добавляем, после показа посаженного леса, на карту кнопку "Вернуться к выбору участка". Чтобы по ней можно было бы обновить карту и вернуться к выбору других акций Фонда.
+                // Создаем пользоваетльский макет кнопки. С указанием класс Bootstrap3.
+                var ButtonLayout = ymaps.templateLayoutFactory.createClass(
+                "<div class='btn btn-warning'>" +
+                   "{{data.content}}" +
+                "</div>"
+                ),
+                firstButton = new ymaps.control.Button({
+                 data: {
+                   content: "Вернуться к выбору участка"
+                 },
+                 options: {
+                   // Подключаем созданный макет.
+                   layout: ButtonLayout
+                 }
+                 });
+                // Устанавливаем максимальную ширину кнопки. Чтобы весь текст помещался на ней.
+                firstButton.options.set({'selectOnClick': false, 'maxWidth': 200});
+                // Указываем расположение кнопки на карте.
+                myMap.controls.add(firstButton, {float: 'left'});
+
+                // При нажатии на кнопку, обновляем страницу с картой.
+                firstButton.events.add("click", function () {
+                 //alert("Клик по кнопке произошел.");
+                 document.location.reload();
+                });
+
+                // Загружаем через загрузчик модулей, весь код из файла area_square_5.js, по построению площади посаженного леса. Разделенной на квадраты.
+                // Действия по добавлению геоколлекции и балуна, на карту, выполняем здесь же в контексте require. Т.к. все загруженные данные не будут доступны вне его. Указываем одну зависимость от jquery.
+                require(["http://intranet.russiancarbon.org/f/min/posadit-les/area_square_5.js"], function(jQuery) {
+                  // alert("это выполнится только тогда, когда файл area_square_1.js будет загружен");
+
+                  // Открываем в центре круга, балун с информацией о площади посадки.
+                  myMap.balloon.open([55.647931, 38.859452], {contentBody: 'Площадь высадки леса - 2 га'});
+
+                  // Добавляем коллекцию на карту.
+                  myMap.geoObjects.add(myGeoObjects);
+                  // Устанавливаем карте центр и масштаб так, чтобы охватить коллекцию целиком.
+                  myMap.setBounds(myGeoObjects.getBounds());
+                });
+                }
+        });
+        // Макет балуна акции Поможем Природе вместе!
+        BalloonContentLayout5 = ymaps.templateLayoutFactory.createClass(
+            '<div style="margin: 10px;">' +
+              '<p style="background-color: rgba(0, 136, 203, 1) !important; padding: 5px; color: #ffffff;"><b style="font-size: 14px;">Акция Поможем Природе вместе!</b><br /><i style="font-size: 12px;">15 мая 2013 года | PepsiCo </i></p><p style="text-align: justify; margin-top: 11px;"><img src="http://img-fotki.yandex.ru/get/6803/118032170.5d/0_c6a23_c1882c1f_XXL.jpg" title="Акция Поможем Природе вместе!" width="170px" style="float: right; padding: 2px; border: 1px solid rgba(0, 136, 203, 1); border-radius: 5px; margin-left: 7px; margin-top: 7px;" /><small>Масштабная посадка в рамках программы "Зеленое дыхание планеты" состоялась вместе с компанией "ПепсиКо" и ее брендом "Родники России". В акции приняли участие более 160 волонтеров, представители власти, федеральные, местные и региональные СМИ, НКО, молодежные движения.<br /><p style="border-top: 1px solid #808080; margin-top: 14px;"></p><p style="margin-top: 11px;"><b style="color: #99490E;">Поглощено 2354 тонны CO<sub>2</sub></b><br /><b style="color: #5cb85c;">Восстановлено 25000 деревьев</b><br /><b style="color: #0088CB; font-weight: bold;">Кол-во волонтеров 170 человек</b></small></p></p><br /><a href="#" class="btn btn-success" id="show_event7">Посмотреть восстановленый участок</a>' +
+            '</div>', {
+
+            // Переопределяем функцию build, чтобы при создании макета начинать
+            // слушать событие click на кнопке-счетчике.
+            build: function () {
+                // Сначала вызываем метод build родительского класса.
+                BalloonContentLayout.superclass.build.call(this);
+                // А затем выполняем дополнительные действия.
+                $('#show_event7').bind('click', this.onCounterClick);
+            },
+
+            // Аналогично переопределяем функцию clear, чтобы снять
+            // прослушивание клика при удалении макета с карты.
+            clear: function () {
+                // Выполняем действия в обратном порядке - сначала снимаем слушателя,
+                // а потом вызываем метод clear родительского класса.
+                $('#show_event7').unbind('click', this.onCounterClick);
+                BalloonContentLayout.superclass.clear.call(this);
+            },
+
+            onCounterClick: function () {
+
+                // Скрываем метки с выбором участков, на карте. Из GeoQuery запроса result.
+                result.setOptions('visible', false);
+
+                // Закрываем балун метки с информацией, по выбранной акции Фонда.
+                myMap.balloon.close();
+                // Отключаем кнопки масштабирования карты, справа вверху. Чтобы была только одна возможность вернуться к выбору участков. По кнопке "Вернуться к выбору участка". В обход тайла с лесом.
+                myMap.controls.remove('zoomControl');
+                //Отключаем возможность масштабирования колесиком мыши
+                myMap.behaviors.disable('scrollZoom');
+                /*
+                // Будем отслеживать изменение уровня масштабирования карты
+                myMap.events.add('boundschange', function (event) {
+                  layers_forest.destroy();
+                });
+                */
+
+                // Добавляем, после показа посаженного леса, на карту кнопку "Вернуться к выбору участка". Чтобы по ней можно было бы обновить карту и вернуться к выбору других акций Фонда.
+                // Создаем пользоваетльский макет кнопки. С указанием класс Bootstrap3.
+                var ButtonLayout = ymaps.templateLayoutFactory.createClass(
+                "<div class='btn btn-warning'>" +
+                   "{{data.content}}" +
+                "</div>"
+                ),
+                firstButton = new ymaps.control.Button({
+                 data: {
+                   content: "Вернуться к выбору участка"
+                 },
+                 options: {
+                   // Подключаем созданный макет.
+                   layout: ButtonLayout
+                 }
+                 });
+                // Устанавливаем максимальную ширину кнопки. Чтобы весь текст помещался на ней.
+                firstButton.options.set({'selectOnClick': false, 'maxWidth': 200});
+                // Указываем расположение кнопки на карте.
+                myMap.controls.add(firstButton, {float: 'left'});
+
+                // При нажатии на кнопку, обновляем страницу с картой.
+                firstButton.events.add("click", function () {
+                 //alert("Клик по кнопке произошел.");
+                 document.location.reload();
+                });
+
+                // Загружаем через загрузчик модулей, весь код из файла area_square_7.js, по построению площади посаженного леса. Разделенной на квадраты.
+                // Действия по добавлению геоколлекции и балуна, на карту, выполняем здесь же в контексте require. Т.к. все загруженные данные не будут доступны вне его. Указываем одну зависимость от jquery.
+                require(["http://intranet.russiancarbon.org/f/min/posadit-les/area_square_7.js"], function(jQuery) {
+                  // alert("это выполнится только тогда, когда файл area_square_1.js будет загружен");
+
+                  // Открываем в центре круга, балун с информацией о площади посадки.
+                  myMap.balloon.open([55.510522, 38.500622], {contentBody: 'Площадь высадки леса - 6 га'});
+
+                  // Добавляем коллекцию на карту.
+                  myMap.geoObjects.add(myGeoObjects);
+                  // Устанавливаем карте центр и масштаб так, чтобы охватить коллекцию целиком.
+                  myMap.setBounds(myGeoObjects.getBounds());
+                });
+                }
         });
 
-    myMap.controls.add(listBox, {float: 'left'});
+    // Сохраняем значение this.yMap в переменнную myMap.
+    var myMap = this.yMap;
 
-  };
+    // Создание GeoQueryResult из JSON. С акциями по посадке. Все данные выводятся в макетах балунов, соответствующих акций.
+    var result = ymaps.geoQuery({
+    "type": "FeatureCollection",
+    "features": [
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    55.81417815,
+                    38.82883800
 
-  //Создание новой метки на карте
-    Map.prototype.createPlacemark = function (coords) {
-    var placemark;
+                ]
+            },
+            "properties": {
+                "hintContent": "Акция Stop CO2"
+            },
+            "options": {
+                "preset": "islands#darkGreenCircleDotIcon",
+                balloonMaxHeight: 800,
+                balloonContentLayout: BalloonContentLayout3
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    55.647931,
+                    38.85945
+                ]
+            },
+            "properties": {
+                "hintContent": "Акция День дерева"
+            },
+            "options": {
+                "preset": "islands#darkGreenCircleDotIcon",
+                balloonMaxHeight: 800,
+                balloonContentLayout: BalloonContentLayout4
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    55.5105,
+                    38.5006
+                ]
+            },
+            "properties": {
+                "hintContent": "Акция Поможем Природе вместе!"
+            },
+            "options": {
+                "preset": "islands#darkGreenCircleDotIcon",
+                balloonMaxHeight: 800,
+                balloonContentLayout: BalloonContentLayout5
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    55.3634,
+                    39.7362
+                ]
+            },
+            "properties": {
+                "hintContent": "Акция с компаниями Алкоа, Топливный регион"
+            },
+            "options": {
+                "preset": "islands#darkGreenCircleDotIcon",
+                balloonMaxHeight: 800,
+                balloonContentLayout: BalloonContentLayout1
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    55.823180,
+                    37.928795
+                ]
+            },
+            "properties": {
+                "hintContent": "Акция Наш лес. Посади свое дерево"
+            },
+            "options": {
+                "preset": "islands#darkGreenCircleDotIcon",
+                balloonMaxHeight: 800,
+                balloonContentLayout: BalloonContentLayout2
+            }
+        },
+        {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [
+                    48.234599,
+                    40.699303
+                ]
+            },
+            "properties": {
+                "hintContent": "Акция с компанией Алкоа"
+            },
+            "options": {
+                "preset": "islands#darkGreenCircleDotIcon",
+                balloonMaxHeight: 800,
+                // Балун будет всплывать над меткой.
+                //balloonPanelMaxMapArea: 0,
+                // Если карта имеет маленькие размеры, то балун будет отображаться в виде панели в нижней части карты.
+                //balloonPanelMaxMapArea: Infinity,
+                balloonContentLayout: BalloonContentLayout
+            }
+        }
+    ]
+}).applyBoundsToMap(myMap, {checkZoomRange: true}); // Делаем приближение карты так, чтобы на ней были охвачены все объекты.
+// Добавляем объекты на карту, методом кластеризации. Ближ. объекты будут объединятся в кластеры. Также задаем стиль для метки кластера.
+myMap.geoObjects.add(result.clusterize()).options.set("preset", "islands#invertedDarkGreenClusterIcons");
 
-    placemark = new ymaps.Placemark([coords.lat, coords.lng], {
-      iconContent: "H"}, {
-      draggable: true,
-      visible: false
-    });
 
-    //Добавляем метки на карту
-    this.placemarks.push(placemark);
-    this.yMap.geoObjects.add(placemark);
-  };
+// С помощью jQuery.getJSON, подгружаем соответствующий файл с акциями по посадке деревьев.
+/*
+jQuery.getJSON('/f/min/map/posadki.json', function (json) {
+  var geoObjects = ymaps.geoQuery(json)
+   .addToMap(myMap)
+   .applyBoundsToMap(myMap, {
+   checkZoomRange: true
+   });
+});
+*/
 
-  // При инициализации карты, создаем новый класс 'ymap-ready' и добавляем его к странице
-  Map.prototype.init = function () {
-    this.root.addClass('ymap-ready');
-  };
+};
 
-  //возвращаем результат функции 'Map' в билд проекта, в файл main.build.js.
-  als.Map = Map;
-  return Map;
+
+//Инициализация карты
+Map.prototype.init = function () {
+   this.root.addClass('ymap-ready');
+};
+
+   als.Map = Map;
+   return Map;
 });
