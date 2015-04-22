@@ -433,7 +433,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
               // Если добавлена первая метка к маршруту, и скрыт большой балун с карты. Показываем бегущую за курсором машинку. Чтобы можно было установить следующую точку маршрута, на карту.
               if(markers.length >= 1)
               {
-                // Скрываем бегающий за мышкой значок машинки. При установлении новой точки к маршруту.
+                // Показываем бегающий за мышкой значок машинки. При установлении новой точки к маршруту.
                 $(".pointerImg").css({'opacity' : '1'});
               }
               });
@@ -455,12 +455,14 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              }
              });
 
+             // Производим перебор массива markers. Каждое значение добавляем, отдельно, в массив point. Чтобы в дальнейшей использовать его для добавления путевых точек автомаршрута.
              for(var i = 0, l = markers.length; i < l; i++) {
 			   point[i] = markers[i].geometry.getCoordinates();
 			 }
 
              // перед построением нового маршрута проверяем, были ли уже проложены старые и удаляем их, если да.
              if(route) myMap.geoObjects.remove(route);
+             // Очищаем блок с данными, справа от карты.
              $(".route-length1").empty();
              // Очищаем блок с данными по углеродному следу. Вверху над картой.
              $(".result-co2").empty();
@@ -486,7 +488,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
              // Если все селекторы выбраны, то начинаем строить маршрут, по двум первым, отмеченным точкам.
              else
              {
-
+              // Подключаем скрипт запуска машинки, по маршруту.
               $.getScript('../f/min/map/car.js', function () {
                 car = new Car({
                 iconLayout: ymaps.templateLayoutFactory.createClass(
@@ -522,11 +524,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                   editWayPoints: true
                 });
 
-                // Скрываем первоначальные метки по кликам по карте. Чтобы передать их добавление маршрутизатору.
+                // Скрываем первоначальные метки по кликам по карте. Чтобы передать добавление новых, маршрутизатору.
                 myPlacemark.options.set('visible', false);
 
                 // С помощью метода getWayPoints() получаем массив точек маршрута.
                 var points = route.getWayPoints();
+                // Определяем опции, путевых точек маршрута.
                 points.options.set({
                 //'preset': 'twirl#carIcon'
                 // делаем путевую точку ввиде картинки машинки. Настриаваем ее размеры.
@@ -569,7 +572,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                   text_route = firstGeoObject_text;
                 }
 
-                // При клике на любую из путевых точек маршрута, добавляем балун с кнопками удаления - "Удалить маршрут", "Удалить метку".
+                // При клике на любую из путевых точек маршрута, добавляем балун с кнопкой - "Удалить маршрут".
                 points.events.add('click', function (e) {
                      // если 'e' не событие, то берем window.event
                      e = e || event;
@@ -584,11 +587,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                      ymaps.geocode(coords_route_point).then(function (res) {
                         var route_point = res.geoObjects.get(0);
                         route_point_1 = route_point.properties.get('text');
-                        myMap.balloon.open(coords_route_point, {contentBody: route_point_1 + '<div id="menu_delete"><button type="submit" class="btn btn-warning" id="delete_route">Удалить маршрут</button></div>'});
+                        myMap.balloon.open(coords_route_point, {contentBody: route_point_1 + '<div id="menu_delete"><button type="submit" class="btn btn-warning" id="delete_route">Удалить маршрут?</button></div>'});
 
                         // Механизм удаления всего маршрута, по кнопке "Удалить маршрут".
                         $('#menu_delete button[id=delete_route]').click(function () {
 
+                        document.location.reload();
+                        /*
                         //Делаем невидимым блок с картинкой самолетика. Перед добавлением новой большой метки с пояснениями.
                         $(".span12").css({'opacity' : '0'});
 
@@ -731,6 +736,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                         // Показываем ссылку на обновление страницы. Вверху справа над картой.
                         $(".link-up").css({'display' : 'block'});
+                        */
                         });
                         });
 
@@ -1674,6 +1680,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                  title: "Удалить маршрут",
                  onClick: function () {
 
+                 document.location.reload();
+
+                 /*
                  //Делаем невидимым блок с картинкой самолетика. Перед добавлением новой большой метки с пояснениями.
                  $(".span12").css({'opacity' : '0'});
 
@@ -1729,7 +1738,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                    $(".span12").css({'opacity' : '1'});
 
                    $('#route_avia').click(function () {
-                     //console.log("Клик по машинке произошел.");
+                     //console.log("Клик по самолетику произошел.");
 
                      // Механизм движения за курсором, значка машинки. Через свойство перемещания курсора мышки 'onmousemove', в любом направлении экрана.
                      document.onmousemove = function (e) {
@@ -1782,6 +1791,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                    // Показываем ссылку на обновление страницы. Вверху справа над картой.
                    $(".link-up").css({'display' : 'block'});
+                   */
                    }
                  });
                return editorItems;
