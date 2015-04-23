@@ -116,8 +116,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
       {
         center: coords_location,
         zoom: 8,
-        type: 'yandex#map',
-        controls: []
+        type: 'yandex#map'
       }
     ),
     //button1 = $('#delete'),
@@ -536,7 +535,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                    content: "Показать пробки"
                  },
                 state: {
-                  trafficShown: true
+                  shown: true
                 },
                 options: {
                    // Подключаем созданный макет.
@@ -552,6 +551,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                 // Добавляем кнопку показывающую пробки, на карту.
                 myMap.controls.add(trafficControl, {top: 5, left: widthR_traffic});
+                //Провайдер пробок "сейчас" при открытии будет показывать слой дорожных событий.
                 //myMap.controls.get('trafficControl').getProvider('traffic#actual').state.set('infoLayerShown', true);
 
                 // Включаем редактор маршрута. С возможностью добавлять, удалять, перемещать путевые точки маршрута.
