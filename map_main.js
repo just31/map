@@ -58,7 +58,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
       yMaps.resolve();
     };
     yMaps.done(arguments);
-    require(['//api-maps.yandex.ru/2.0.39/?load=package.full&lang=ru-RU&onload=yandexMapsLoaded']);
+    require(['//api-maps.yandex.ru/2.0.40/?load=package.full&lang=ru-RU&onload=yandexMapsLoaded']);
     require(['//yandex.st/jquery/2.1.1/jquery.min.js']);
     require(['http://intranet.russiancarbon.org/f/min/drag-scroll-behavior.js']);
     require(['http://webmap-blog.ru/examples/add-users-ymapsapi2/js/bootstrap.min.js']);
@@ -102,9 +102,9 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
     //Получаем значения высоты и ширины экрана монитора.
     var heightR = $(window).height();// высота экрана
-    // Делаем отступ:
+    // Делаем отступ на ширину контейнера с картой:
     var heightR_1 = heightR - 78;
-    // Делаем отступ:
+    // Делаем отступ на ширину контейнера с картой:
     var widthR = $(window).width();// ширина экрана
     var widthR_1 = widthR - 30;
 
@@ -116,11 +116,12 @@ define('map_main', ['jquery', 'als'], function ($, als) {
       {
         center: coords_location,
         zoom: 8,
-        type: 'yandex#map'
+        type: 'yandex#map',
+        controls: []
       }
     ),
     //button1 = $('#delete'),
-        // DOM-контейнер карты. Начало функционала перетаскивания картинок из тулбара, на карту. Продолжение функционала перетаскивания, начинается ниже в коде со строки: ymaps.behavior.storage.add('dragScroll', DragScrollBehavior);
+    // DOM-контейнер карты. Начало функционала перетаскивания картинок из тулбара, на карту. Продолжение функционала перетаскивания, начинается ниже в коде со строки: ymaps.behavior.storage.add('dragScroll', DragScrollBehavior);
     // После определения myMap и добавления геоколлекции аэропортов на карту.
     $mapContainer = $(this.yMap.container.getElement());
 
@@ -128,7 +129,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     // Иначе this.yMap, не будет доступен внутри них.
     myMap = this.yMap;
 
-
+    /*
+    // Добавим элемент управления полноэкранным режимом на карту и сразу переведем
+    // её в «полноэкранный режим».
+    var fullscreenControl = new ymaps.control.FullscreenControl();
+    myMap.controls.add(fullscreenControl, {float: 'left'});
+    fullscreenControl.enterFullscreen();
+    */
     // Добавляем геоколллекцию меток аэропортов на карту
     // Создание пустой геоколллекции myCollection, для добавления в нее списка аэропортов из файла aero3.csv.
     myCollection = new ymaps.GeoObjectCollection();
@@ -517,6 +524,36 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                 // Получаем отдельные пути маршрута
                 var way_m_paths = route.getPaths();
 
+                // Добавление на карту элемента управления пробками
+                // с включенными пробками "сейчас".
+                var ButtonLayout = ymaps.templateLayoutFactory.createClass(
+                "<div class='btn btn-warning'>" +
+                   "{{data.content}}" +
+                "</div>"
+                ),
+                trafficControl = new ymaps.control.TrafficControl({
+                data: {
+                   content: "Показать пробки"
+                 },
+                state: {
+                  trafficShown: true
+                },
+                options: {
+                   // Подключаем созданный макет.
+                   layout: ButtonLayout
+                 }
+                });
+
+                //Получаем значение ширины экрана монитора.
+                // Делаем отступ на ширину контейнера с картой:
+                var widthR = $(window).width();// ширина экрана
+                // Делим ее на 2. Чтобы поставить отступ для кнопки "Пробки", равным половине экрана.
+                var widthR_traffic = ((widthR - 40) / 2) - 35;
+
+                // Добавляем кнопку показывающую пробки, на карту.
+                myMap.controls.add(trafficControl, {top: 5, left: widthR_traffic});
+                //myMap.controls.get('trafficControl').getProvider('traffic#actual').state.set('infoLayerShown', true);
+
                 // Включаем редактор маршрута. С возможностью добавлять, удалять, перемещать путевые точки маршрута.
                 route.editor.start({
                   addWayPoints: true,
@@ -587,12 +624,31 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                      ymaps.geocode(coords_route_point).then(function (res) {
                         var route_point = res.geoObjects.get(0);
                         route_point_1 = route_point.properties.get('text');
-                        myMap.balloon.open(coords_route_point, {contentBody: route_point_1 + '<div id="menu_delete"><button type="submit" class="btn btn-warning" id="delete_route">Удалить маршрут?</button></div>'});
+                        myMap.balloon.open(coords_route_point, {contentBody: route_point_1 + '<div id="menu_delete"><button type="submit" class="btn btn-warning" id="delete_route">Удалить маршрут</button></div>'});
 
                         // Механизм удаления всего маршрута, по кнопке "Удалить маршрут".
                         $('#menu_delete button[id=delete_route]').click(function () {
 
                         document.location.reload();
+
+                        // Получаем текущие размеры контейнера карты.
+                        var razmer = myMap.container.getSize();
+                        //console.log(razmer);
+
+                        /*
+                        //Получаем значение ширины экрана монитора.
+                        // Делаем отступ на ширину контейнера с картой:
+                        var widthR = $(window).width();// ширина экрана
+                        var widthR_new = widthR - 40;
+
+                        // Изменим размеры контейнера карты
+                        myMap.container.getElement().style.width = widthR_new + 'px';
+                        // Инициируем пересчет размеров
+                        myMap.container.fitToViewport();
+                        */
+                        //var fullscreenControl = new ymaps.control.FullscreenControl({data: { title: 'Полноэкранный режим'}});
+                        //myMap.controls.add(fullscreenControl);
+
                         /*
                         //Делаем невидимым блок с картинкой самолетика. Перед добавлением новой большой метки с пояснениями.
                         $(".span12").css({'opacity' : '0'});
