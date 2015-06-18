@@ -71,9 +71,10 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
   Map.prototype.createMap = function () {
 
-    var i, ii, route, icon, distance, myGeoObject, placemark, myBalloonContentBodyLayout, type_route, type_fuel, type_travel, type_aero, type_rad, firstGeoObject_text, firstGeoObject_text_route_first, route_point_avio,
-    firstGeoObject_text_route, firstGeoObject_text_avio_first, num, rad, aero_num_people, route_point_1, way_m, visibleObjects, firstGeoObject_1, ballon_aero, text, distance_aero_length, car, geolocation, coords_location,
-      ch = 1, el = this.root.get(0);
+    var i, ii, route, icon, distance, myGeoObject, placemark, myPlacemark, myPlacemark_1, placemark_new, myBalloonContentBodyLayout, type_route, type_fuel, type_travel, type_aero, type_rad, firstGeoObject_text,
+    firstGeoObject_text_route_first, route_point_avio, firstGeoObject_text_route, firstGeoObject_text_avio_first, num, rad, aero_num_people, route_point_1, way_m, visibleObjects, firstGeoObject_1,
+     ballon_aero, text, distance_aero_main, distance_aero_length, car, geolocation, coords_location,
+      ch = 1;
     var markers = [];
 	var point = [];
     var geo_points = [];
@@ -82,14 +83,15 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     var point_aero = [];
     var way_m_paths = [];
     var model_point = [];
+    var model_point1 = [];
     var model_point_coord = [];
     var markers_route = [];
     var co2 = [];
     var flag_click_array = [];
     var myCollection;
-    // делаем переменную myCollection, глобальной, чтобы можно было ее значение передавать из ajaх запроса. При получении списка аэропортов из aero1.csv.
+    // Делаем переменную myCollection, глобальной, чтобы можно было ее значение передавать из ajaх запроса. При получении списка аэропортов из aero1.csv.
     window.globalvar = myCollection;
-    // создаем глобальную переменную для GeoQueryResult, со списком аэропортов.
+    // Создаем глобальную переменную для GeoQueryResult, со списком аэропортов.
     var arPlacemarksRez;
     window.globalvar = arPlacemarksRez;
 
@@ -118,15 +120,15 @@ define('map_main', ['jquery', 'als'], function ($, als) {
         zoom: 8,
         type: 'yandex#map'
       }
-    ),
+    );//,
+    //$mapContainer = $(this.yMap.container.getElement());
     //button1 = $('#delete'),
     // DOM-контейнер карты. Начало функционала перетаскивания картинок из тулбара, на карту. Продолжение функционала перетаскивания, начинается ниже в коде со строки: ymaps.behavior.storage.add('dragScroll', DragScrollBehavior);
     // После определения myMap и добавления геоколлекции аэропортов на карту.
-    $mapContainer = $(this.yMap.container.getElement());
 
     // Сохраняем значение this.yMap в переменнную myMap. Чтобы передать ее значение в функции скрипта.
     // Иначе this.yMap, не будет доступен внутри них.
-    myMap = this.yMap;
+    var myMap = this.yMap;
 
     /*
     // Добавим элемент управления полноэкранным режимом на карту и сразу переведем
@@ -2268,7 +2270,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
                     return placemark;
     }
-
+        /*
         $mapContainer.on('dragover', function (e) {
                         // Эта инструкция разрешает перетаскивание.
                         e.preventDefault();
@@ -2351,7 +2353,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
                         }
                         });
                         // Завершаем механизм обхода, получения 'id', перетянутого значка на карту. В зависимости от того, как он был перетянут, из балуна первичной метки или из блока слева, вверху над картой.
-
+                       */
     /*
       //Удаление маршрута, геокодированной коллекции координат и добавленных меток, с карты и очистка данных. По красной кнопке "Очистить маршрут".
         button1.click(function () {
@@ -2548,7 +2550,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
 
   // При инициализации карты, создаем новый класс 'ymap-ready' и добавляем его к странице
   Map.prototype.init = function () {
-    this.root.addClass('ymap-ready');
+    $('#map_main').addClass('ymap-ready');
   };
 
   //возвращаем результат функции 'Map' в билд проекта, в файл main.build.js.
