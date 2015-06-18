@@ -257,13 +257,13 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     myMap.balloon.close();
 
 
-    //Добавляем элементы управления
-    //this.yMap.controls.add("zoomControl").add("typeSelector").add(SearchControl, { left: '0px', top: '5px' });
+    // Добавляем элементы управления
+    // this.yMap.controls.add("zoomControl").add("typeSelector").add(SearchControl, { left: '0px', top: '5px' });
     myMap.controls.add("zoomControl").add("typeSelector");
-    //Отключаем функции: изменения масштаба карты колесиком мышки. И масштабирования карты при выделении области правой кнопкой мыши.
+    // Отключаем функции: изменения масштаба карты колесиком мышки. И масштабирования карты при выделении области правой кнопкой мыши.
     myMap.behaviors.disable(['scrollZoom', 'rightMouseButtonMagnifier']);
 
-    //Устанавливаем предельный zoom(приближение).
+    // Устанавливаем предельный zoom(приближение).
     if (myMap.getZoom() >= 8) {
       myMap.setZoom(8);
     }
