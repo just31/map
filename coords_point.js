@@ -60,16 +60,33 @@ function Map (root) {  // !!!!
   };
 
   Map.prototype.createMap = function () {
-    var myPlacemark, coor, coor_1, myCollection, prev;
+    var myPlacemark, coor, coor_1, myCollection, prev, ymapsmlButton, ymapsmlButton1, firstGeoObject;
     var distance = 0;
     var distance1 = 0;
-    var i,
-      el = this.root.get(0);
+    var i;
+
+    // Данные о местоположении, определённом по IP.
+    var geolocation = ymaps.geolocation;
+    // Координаты местопложения пользователя. По ним будем открывать центр карты.
+    var coords_location = [geolocation.latitude, geolocation.longitude];
+    // Результат смотрим в консоли
+    console.log(geolocation.country, geolocation.city, geolocation.region, coords_location);
+
+    //Получаем значения высоты и ширины экрана монитора.
+    var heightR = $(window).height();// высота экрана
+    // Делаем отступ на ширину контейнера с картой:
+    var heightR_1 = heightR - 78;
+    // Делаем отступ на ширину контейнера с картой:
+    var widthR = $(window).width();// ширина экрана
+    var widthR_1 = widthR - 30;
+
+    // Устанавливаем полученные значения, в качестве размеров для блока с картой.
+    $('#coords_point').css({'width':widthR_1,'height':heightR_1});
 
     this.yMap = new ymaps.Map(
-      el,
+      'coords_point',
       {
-        center: [54.3135, 37.7420],
+        center: coords_location,
         zoom: 7,
         type: 'yandex#map',
         controls: ["zoomControl"]
@@ -157,7 +174,7 @@ result.search('geometry.type != "Point"').addToMap(myMap);
 // Точечные объекты добавим на карту через кластеризатор.
 myMap.geoObjects.add(result.search('geometry.type == "Point"').clusterize());
 
-//удаление объектов(списка аэропортов) с карты.
+//удаление объектов(списка аэропортов) с карты
 ymapsmlButton1.click(function () {
 var result1 = result.remove(result);
 myMap.geoObjects.remove(result);
@@ -244,7 +261,7 @@ ymapsmlButton1.click(function () {
     });
 
     // Обработчик загрузки XML-файлов.
-    function onGeoXmlLoad (res) {
+    function onGeoXmlLoad (res) { Определить координаты можно: добавив адрес в строку поиска, переместив метку в то место координаты которого Вы хотите узнать или кликнув по карте левой кнопкой мыши в нужном месте. Также при перемещении метки по карте, будет определяться ее пройденное расстояние, по трем указанным событиям. Можно добавить метку-драггер, перетащив на карту картинку самолетика, находящуюся под картой. По кнопкам: "Показать аэропорты", "Скрыть аэропорты", вы можете увидеть и скрыть аэропорты Москвы.
         myMap.geoObjects.add(res.geoObjects);
         if (res.mapState) {
             res.mapState.applyToMap(myMap);
@@ -320,7 +337,18 @@ ymapsmlButton1.click(function () {
         if (containsPoint(mapGlobalPixelBounds, markerGlobalPosition)) {
             // Теперь переводим глобальные пиксельные координаты в геокоординаты с учетом текущего уровня масштабирования карты.
             var geoPosition = myMap.options.get('projection').fromGlobalPixels(markerGlobalPosition, myMap.getZoom());
-            alert(geoPosition.join(' '));
+            ymaps.geocode(geoPosition).then(function (res) {
+                firstGeoObject = res.geoObjects.get(0);
+                // В окне предупреждения 'alert', выводим местоположение и координаты драгерра.
+                alert(firstGeoObject.properties.get('text') + '\n\r' + geoPosition.join(' '));
+
+                myMap.balloon.open(geoPosition, {
+                contentHeader:'Адрес метки:',
+                contentBody:'<p><small>' + firstGeoObject.properties.get('text') + '</small></p>'
+            });
+
+    });
+
         }
     }
 
@@ -358,13 +386,25 @@ ymapsmlButton1.click(function () {
     this.yMap.behaviors.disable(['scrollZoom', 'rightMouseButtonMagnifier']);
 
     //Общая начальная точка метки. Откуда начинаем считать расстояние(getDistance()) в трех обработчиках событий(перетаскивания, клика по карте, поиска по карте).
-    coor = [55.752078, 37.621147];
+    coor = coords_location;
     //Начальные координаты точки, если не было произведено никаких действий по карте. Нужны для функции savecoordinats().
-    coor_1 = [55.752078, 37.621147];
+    coor_1 = coords_location;
 
-	//Определяем метку и добавляем ее на карту
+	//Определяем центральную метку и добавляем ее на карту.
 	myPlacemark = new ymaps.Placemark(coor, {}, {preset: "islands#violetDotIcon", draggable: true, visible: true});
     this.yMap.geoObjects.add(myPlacemark);
+    // Производим геокодирование метки.
+    ymaps.geocode(coor).then(function (res) {
+                firstGeoObject = res.geoObjects.get(0);
+                // Устанавливаем опции метки: 1. Чтобы метка оставалась на карте, при открытом балуне. 2. Устанавливаем ее приоритет равным 0, чтобы она находилась под открытым балуном.
+                myPlacemark.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
+                // Устанавливаем занчение для балуна метки. Адрес ее местоположения.
+                myPlacemark.properties.set('balloonContent', firstGeoObject.properties.get('text'));
+                // Делаем балун сразу открытым, при загрузке карты.
+                myPlacemark.balloon.open();
+                // Устанавливаем значение для хинта центральной метки. Также ее адрес.
+                myPlacemark.properties.set('hintContent', firstGeoObject.properties.get('text'));
+    });
 
     //Отслеживаем событие начала перемещения метки
      myPlacemark.events.add("dragstart", function (e) {
@@ -392,6 +432,7 @@ ymapsmlButton1.click(function () {
     distance = Math.round(ymaps.coordSystem.geo.getDistance(prev, current) / 1000);
 	savecoordinats();
     // Отправим запрос на геокодирование. Геокодирование координат полученной метки, в полный адрес. Его вывод в балуне метки.
+      /*
        ymaps.geocode(coor_1).then(function (res) {
          var firstGeoObject = res.geoObjects.get(0);
 
@@ -399,7 +440,20 @@ ymapsmlButton1.click(function () {
          contentHeader:'Адрес метки:',
          contentBody:'<p><small>' + firstGeoObject.properties.get('text') + '</small></p>'
          });
-    });
+         });
+      */
+      // Производим геокодирование метки.
+      ymaps.geocode(coor_1).then(function (res) {
+                firstGeoObject = res.geoObjects.get(0);
+                // Устанавливаем опции метки: 1. Чтобы метка оставалась на карте, при открытом балуне. 2. Устанавливаем ее приоритет равным 0, чтобы она находилась под открытым балуном.
+                myPlacemark.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
+                // Устанавливаем занчение для балуна метки. Адрес ее местоположения.
+                myPlacemark.properties.set('balloonContent', firstGeoObject.properties.get('text'));
+                // Делаем балун сразу открытым, при загрузке карты.
+                myPlacemark.balloon.open();
+                // Устанавливаем значение для хинта центральной метки. Также ее адрес.
+                myPlacemark.properties.set('hintContent', firstGeoObject.properties.get('text'));
+      });
 	}, myPlacemark);
 
     //Отслеживаем событие щелчка по карте
@@ -411,7 +465,8 @@ ymapsmlButton1.click(function () {
 	savecoordinats();
 
     // Отправим запрос на геокодирование. Геокодирование координат полученной метки, в полный адрес. Его вывод в балуне метки.
-       ymaps.geocode(coor_1).then(function (res) {
+    /*
+    ymaps.geocode(coor_1).then(function (res) {
        var firstGeoObject = res.geoObjects.get(0);
 
          myMap.balloon.open(coor_1, {
@@ -419,41 +474,19 @@ ymapsmlButton1.click(function () {
          contentBody:'<p><small>' + firstGeoObject.properties.get('text') + '</small></p>'
          //contentFooter:'<sup>Щелкните еще раз</sup>'
          });
-             /*
-            myPlacemark.properties
-                .set({
-                    iconContent: firstGeoObject.properties.get('name'),
-                    balloonContent: firstGeoObject.properties.get('text')
-                });
-
-       var names = [];
-         // Переберём все найденные результаты и
-         // запишем имена найденный объектов в массив names.
-         res.geoObjects.each(function (obj) {
-            names.push(obj.properties.get('name'));
-         });
-
-         myMap.balloon.open(coor_1, {
-         contentHeader:'Адрес метки:',
-         contentBody:'<p><small>' + names.reverse().join(', ') + '</small></p>'
-         //contentFooter:'<sup>Щелкните еще раз</sup>'
-         });
-         */
-
-                /*
-                // Добавим на карту метку в точку, по координатам
-                // которой запрашивали обратное геокодирование.
-                myMap.geoObjects.add(new ymaps.Placemark(coor_1, {
-                    // В качестве контента иконки выведем
-                    // первый найденный объект.
-                    iconContent:names[0],
-                    // А в качестве контента балуна - подробности:
-                    // имена всех остальных найденных объектов.
-                    hintContent:names.reverse().join(', ')
-                }, {
-                    preset:'twirl#lightblueStretchyIcon'
-                }));
-                */
+    });
+    */
+    // Производим геокодирование метки.
+      ymaps.geocode(coor_1).then(function (res) {
+                firstGeoObject = res.geoObjects.get(0);
+                // Устанавливаем опции метки: 1. Чтобы метка оставалась на карте, при открытом балуне. 2. Устанавливаем ее приоритет равным 0, чтобы она находилась под открытым балуном.
+                myPlacemark.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
+                // Устанавливаем занчение для балуна метки. Адрес ее местоположения.
+                myPlacemark.properties.set('balloonContent', firstGeoObject.properties.get('text'));
+                // Делаем балун сразу открытым, при загрузке карты.
+                myPlacemark.balloon.open();
+                // Устанавливаем значение для хинта центральной метки. Также ее адрес.
+                myPlacemark.properties.set('hintContent', firstGeoObject.properties.get('text'));
     });
 
 	});
@@ -466,13 +499,27 @@ ymapsmlButton1.click(function () {
     distance = Math.round(ymaps.coordSystem.geo.getDistance(coor, coor_1) / 1000);
 	savecoordinats();
     // Отправим запрос на геокодирование. Геокодирование координат полученной метки, в полный адрес. Его вывод в балуне метки.
-       ymaps.geocode(coor_1).then(function (res) {
+    /*
+    ymaps.geocode(coor_1).then(function (res) {
          var firstGeoObject = res.geoObjects.get(0);
 
          myMap.balloon.open(coor_1, {
          contentHeader:'Адрес метки:',
          contentBody:'<p><small>' + firstGeoObject.properties.get('text') + '</small></p>'
          });
+    });
+    */
+    // Производим геокодирование метки.
+      ymaps.geocode(coor_1).then(function (res) {
+                firstGeoObject = res.geoObjects.get(0);
+                // Устанавливаем опции метки: 1. Чтобы метка оставалась на карте, при открытом балуне. 2. Устанавливаем ее приоритет равным 0, чтобы она находилась под открытым балуном.
+                myPlacemark.options.set({hideIconOnBalloonOpen: false, zIndexActive: 0});
+                // Устанавливаем занчение для балуна метки. Адрес ее местоположения.
+                myPlacemark.properties.set('balloonContent', firstGeoObject.properties.get('text'));
+                // Делаем балун сразу открытым, при загрузке карты.
+                myPlacemark.balloon.open();
+                // Устанавливаем значение для хинта центральной метки. Также ее адрес.
+                myPlacemark.properties.set('hintContent', firstGeoObject.properties.get('text'));
     });
 	});
 
