@@ -62,7 +62,7 @@ define('map_main', ['jquery', 'als'], function ($, als) {
     require(['//yandex.st/jquery/2.1.1/jquery.min.js']);
     require(['http://intranet.russiancarbon.org/f/min/drag-scroll-behavior.js']);
     require(['http://webmap-blog.ru/examples/add-users-ymapsapi2/js/bootstrap.min.js']);
-    // Сделаем броузеры ES5 friendly текущему.
+    // Сделаем броузеры friendly стандартам ES5.
     require(['http://intranet.russiancarbon.org/f/min/es5-shim.js']);
     // Файлы для множественного геокодирования координат в адреса. Нужны для геокодирования массивов с точками автомаршрута, первого вида маршрутизации.
     require(['http://intranet.russiancarbon.org/f/min/multi-geocoder.js']);
